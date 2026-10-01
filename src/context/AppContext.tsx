@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
   User,
   UserRole,
@@ -8,7 +8,6 @@ import {
   VoteOption,
   Commitment,
   CommitmentStatus,
-  CommitmentEvidence,
   QualityFactor,
   QualityFeature,
   QualityAspect,
@@ -17,20 +16,11 @@ import {
   InstitutionalNotification,
   Estamento,
   CustomRole,
+  DigitalActSeal,
 } from '../types';
-import {
-  INITIAL_USERS,
-  INITIAL_ESTAMENTOS,
-  INITIAL_CUSTOM_ROLES,
-  INITIAL_MEETINGS,
-  INITIAL_MOTIONS,
-  INITIAL_COMMITMENTS,
-  INITIAL_QUALITY_FACTORS,
-  INITIAL_QUALITY_MAPPINGS,
-  INITIAL_ACCESS_REQUESTS,
-  INITIAL_NOTIFICATIONS,
-  CNA_ABET_TEMPLATE_FACTORS,
-} from '../data/mockData';
+import { CNA_ABET_TEMPLATE_FACTORS } from '../data/mockData';
+import { api, realtime, setApiUserId } from '../services/api';
+import { googleSignIn, logoutGoogle, initAuth } from '../services/auth';
 
 interface AppContextType {
   currentUser: User;
@@ -38,20 +28,25 @@ interface AppContextType {
   switchUser: (userId: string) => void;
   switchRole: (role: UserRole) => void;
 
+  // Google Workspace SSO Authentication
+  googleUser: { email: string; name: string; photoURL?: string | null } | null;
+  signInWithGoogle: () => Promise<User | null>;
+  signOutGoogle: () => Promise<void>;
+
   // Committee Members Administration
-  createUser: (userData: Omit<User, 'id' | 'avatarInitials'>) => User;
-  updateUser: (id: string, updates: Partial<User>) => void;
-  deleteUser: (id: string) => void;
+  createUser: (userData: Omit<User, 'id' | 'avatarInitials'>) => Promise<User>;
+  updateUser: (id: string, updates: Partial<User>) => Promise<void>;
+  deleteUser: (id: string) => Promise<void>;
 
   // Estamentos Administration
   estamentos: Estamento[];
-  createEstamento: (data: Omit<Estamento, 'id'>) => Estamento;
-  updateEstamento: (id: string, updates: Partial<Estamento>) => void;
+  createEstamento: (data: Omit<Estamento, 'id'>) => Promise<Estamento>;
+  updateEstamento: (id: string, updates: Partial<Estamento>) => Promise<void>;
   deleteEstamento: (id: string) => void;
 
   // Roles Administration
   customRoles: CustomRole[];
-  createCustomRole: (data: Omit<CustomRole, 'id'>) => CustomRole;
+  createCustomRole: (data: Omit<CustomRole, 'id'>) => Promise<CustomRole>;
   updateCustomRole: (id: string, updates: Partial<CustomRole>) => void;
   deleteCustomRole: (id: string) => void;
   
@@ -59,42 +54,53 @@ interface AppContextType {
   meetings: Meeting[];
   activeMeetingId: string;
   setActiveMeetingId: (id: string) => void;
-  createMeeting: (newMeeting: Omit<Meeting, 'id' | 'quorumPresentCount' | 'quorumTotalRequired'>) => Meeting;
-  updateMeeting: (id: string, updates: Partial<Meeting>) => void;
-  addAgendaItem: (meetingId: string, item: Omit<AgendaItem, 'id' | 'agreements' | 'deliberations' | 'driveAttachments'>) => void;
-  updateAgendaItem: (meetingId: string, itemId: string, updates: Partial<AgendaItem>) => void;
-  deleteAgendaItem: (meetingId: string, itemId: string) => void;
-  sendCitations: (meetingId: string, recipientEmails: string[], note?: string) => void;
-  closeMeeting: (meetingId: string, notes: string) => void;
+  createMeeting: (newMeeting: Omit<Meeting, 'id' | 'quorumPresentCount' | 'quorumTotalRequired'>) => Promise<Meeting>;
+  updateMeeting: (id: string, updates: Partial<Meeting>) => Promise<void>;
+  addAgendaItem: (meetingId: string, item: Omit<AgendaItem, 'id' | 'agreements' | 'deliberations' | 'driveAttachments'>) => Promise<void>;
+  updateAgendaItem: (meetingId: string, itemId: string, updates: Partial<AgendaItem>) => Promise<void>;
+  deleteAgendaItem: (meetingId: string, itemId: string) => Promise<void>;
+  sendCitations: (meetingId: string, recipientEmails: string[], note?: string) => Promise<void>;
+  closeMeeting: (meetingId: string, notes: string) => Promise<void>;
 
   // Motions & Real-time Voting
   motions: Motion[];
-  createMotion: (data: { meetingId: string; agendaItemId?: string; title: string; description: string; majorityRequired: Motion['majorityRequired'] }) => Motion;
-  castVote: (motionId: string, option: VoteOption) => void;
-  finalizeMotion: (motionId: string) => void;
+  createMotion: (data: { meetingId: string; agendaItemId?: string; title: string; description: string; majorityRequired: Motion['majorityRequired'] }) => Promise<Motion>;
+  castVote: (motionId: string, option: VoteOption) => Promise<void>;
+  finalizeMotion: (motionId: string) => Promise<void>;
 
   // Commitments & Audit
   commitments: Commitment[];
-  createCommitment: (data: Omit<Commitment, 'id' | 'assignedAt' | 'status' | 'evidences' | 'assignedBy'>) => Commitment;
-  submitCommitmentEvidence: (commitmentId: string, description: string, driveUrl: string, fileName?: string) => void;
-  auditCommitment: (commitmentId: string, newStatus: CommitmentStatus, notes: string) => void;
+  createCommitment: (data: Omit<Commitment, 'id' | 'assignedAt' | 'status' | 'evidences' | 'assignedBy'>) => Promise<Commitment>;
+  submitCommitmentEvidence: (commitmentId: string, description: string, driveUrl: string, fileName?: string) => Promise<void>;
+  auditCommitment: (commitmentId: string, newStatus: CommitmentStatus, notes: string) => Promise<void>;
+  sendCommitmentDeadlineAlert: (commitmentId: string, customSubject?: string, customBody?: string) => Promise<{ success: boolean; message: string }>;
+  sendBatchDeadlineAlerts: () => Promise<{ sentCount: number; recipients: string[] }>;
 
   // Access Requests for Historical Acts
   accessRequests: AccessRequest[];
-  requestActAccess: (meetingId: string, meetingCode: string, purpose: string) => void;
-  resolveAccessRequest: (requestId: string, status: 'aprobado' | 'rechazado', note?: string) => void;
+  requestActAccess: (meetingId: string, meetingCode: string, purpose: string) => Promise<void>;
+  resolveAccessRequest: (requestId: string, status: 'aprobado' | 'rechazado', note?: string) => Promise<void>;
 
   // Self-Evaluation & Accreditation Quality Matrix
   qualityFactors: QualityFactor[];
-  addQualityFactor: (factor: Omit<QualityFactor, 'id' | 'features'>) => QualityFactor;
-  addQualityFeature: (factorId: string, feature: Omit<QualityFeature, 'id' | 'aspects'>) => void;
-  addQualityAspect: (factorId: string, featureId: string, aspect: Omit<QualityAspect, 'id'>) => void;
-  deleteQualityFactor: (factorId: string) => void;
-  clearQualityFactors: () => void;
-  loadCnaAbetTemplate: () => void;
+  addQualityFactor: (factor: Omit<QualityFactor, 'id' | 'features'>) => Promise<QualityFactor>;
+  addQualityFeature: (factorId: string, feature: Omit<QualityFeature, 'id' | 'aspects'>) => Promise<void>;
+  addQualityAspect: (factorId: string, featureId: string, aspect: Omit<QualityAspect, 'id'>) => Promise<void>;
+  deleteQualityFactor: (factorId: string) => Promise<void>;
+  clearQualityFactors: () => Promise<void>;
+  loadCnaAbetTemplate: () => Promise<void>;
   qualityMappings: ActQualityMapping[];
-  createQualityMapping: (data: Omit<ActQualityMapping, 'id' | 'mappedAt' | 'mappedBy'>) => void;
-  deleteQualityMapping: (mappingId: string) => void;
+  createQualityMapping: (data: Omit<ActQualityMapping, 'id' | 'mappedAt' | 'mappedBy'>) => Promise<void>;
+  deleteQualityMapping: (mappingId: string) => Promise<void>;
+
+  // Digital Seals & Cryptographic PKI
+  digitalSeals: DigitalActSeal[];
+  getActSeal: (meetingId: string) => Promise<DigitalActSeal | undefined>;
+  verifyActSeal: (params: { sha256Hash?: string; signaturePkiToken?: string; canonicalPayload?: string; sealedAt?: string; signerEmail?: string }) => Promise<{
+    foundInRegistry: boolean;
+    seal?: DigitalActSeal;
+    verification: { isValid: boolean; recomputedHash: string; expectedPkiToken: string; errorReason?: string };
+  }>;
 
   // Notifications
   notifications: InstitutionalNotification[];
@@ -103,279 +109,322 @@ interface AppContextType {
 
   // System
   resetAllData: () => void;
+  isLiveSyncConnected: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const STORAGE_KEYS = {
-  USER_ID: 'sig_curriculo_user_id_v5',
-  USERS: 'sig_curriculo_users_v5',
-  ESTAMENTOS: 'sig_curriculo_estamentos_v5',
-  CUSTOM_ROLES: 'sig_curriculo_custom_roles_v5',
-  MEETINGS: 'sig_curriculo_meetings_clean_v5',
-  MOTIONS: 'sig_curriculo_motions_clean_v5',
-  COMMITMENTS: 'sig_curriculo_commitments_clean_v5',
-  QUALITY_FACTORS: 'sig_curriculo_factors_clean_v6',
-  MAPPINGS: 'sig_curriculo_mappings_clean_v5',
-  ACCESS_REQ: 'sig_curriculo_access_req_clean_v5',
-  NOTIFICATIONS: 'sig_curriculo_notifications_clean_v5',
+const DEFAULT_ADMIN_USER: User = {
+  id: 'usr-admin-principal',
+  name: 'Administrador Comité Curricular',
+  email: 'autoevaluacionycurriculomecanica@umayor.edu.co',
+  role: 'presidente',
+  roleLabel: 'Presidente del Comité Curricular',
+  faculty: 'Facultad de Ingeniería',
+  department: 'Ingeniería Mecánica / Acreditación y Currículo',
+  academicTitle: 'Dirección de Autoevaluación & Comité Curricular',
+  avatarInitials: 'CC',
+  hasVote: true,
+  periodo: '2026 - 2028',
+  active: true,
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [users, setUsers] = useState<User[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.USERS);
-    return saved ? JSON.parse(saved) : INITIAL_USERS;
-  });
-
-  const [estamentos, setEstamentos] = useState<Estamento[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.ESTAMENTOS);
-    return saved ? JSON.parse(saved) : INITIAL_ESTAMENTOS;
-  });
-
-  const [customRoles, setCustomRoles] = useState<CustomRole[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.CUSTOM_ROLES);
-    return saved ? JSON.parse(saved) : INITIAL_CUSTOM_ROLES;
-  });
-  
-  const [currentUserId, setCurrentUserId] = useState<string>(() => {
-    return localStorage.getItem(STORAGE_KEYS.USER_ID) || (INITIAL_USERS[0]?.id || 'usr-admin-principal');
-  });
-
-  const currentUser = users.find((u) => u.id === currentUserId) || users[0] || INITIAL_USERS[0];
-
-  const [meetings, setMeetings] = useState<Meeting[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.MEETINGS);
-    return saved ? JSON.parse(saved) : INITIAL_MEETINGS;
-  });
-
+  const [currentUser, setCurrentUser] = useState<User>(DEFAULT_ADMIN_USER);
+  const [users, setUsers] = useState<User[]>([DEFAULT_ADMIN_USER]);
+  const [estamentos, setEstamentos] = useState<Estamento[]>([]);
+  const [customRoles, setCustomRoles] = useState<CustomRole[]>([]);
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [activeMeetingId, setActiveMeetingId] = useState<string>('');
+  const [motions, setMotions] = useState<Motion[]>([]);
+  const [commitments, setCommitments] = useState<Commitment[]>([]);
+  const [qualityFactors, setQualityFactors] = useState<QualityFactor[]>([]);
+  const [qualityMappings, setQualityMappings] = useState<ActQualityMapping[]>([]);
+  const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
+  const [notifications, setNotifications] = useState<InstitutionalNotification[]>([]);
+  const [digitalSeals, setDigitalSeals] = useState<DigitalActSeal[]>([]);
+  const [isLiveSyncConnected, setIsLiveSyncConnected] = useState<boolean>(false);
+  const [googleUser, setGoogleUser] = useState<{ email: string; name: string; photoURL?: string | null } | null>(null);
 
-  const [motions, setMotions] = useState<Motion[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.MOTIONS);
-    return saved ? JSON.parse(saved) : INITIAL_MOTIONS;
-  });
+  // Initial Data Bootstrap from Server
+  const loadBootstrapData = useCallback(async () => {
+    try {
+      const data = await api.bootstrap();
+      if (data.users && data.users.length > 0) {
+        setUsers(data.users);
+        const current = data.users.find((u) => u.id === currentUser.id) || data.currentUser || data.users[0];
+        setCurrentUser(current);
+        setApiUserId(current.id);
+      }
+      if (data.estamentos) setEstamentos(data.estamentos);
+      if (data.customRoles) setCustomRoles(data.customRoles);
+      if (data.meetings) {
+        setMeetings(data.meetings);
+        if (data.meetings.length > 0 && !activeMeetingId) {
+          const inProgress = data.meetings.find((m) => m.status === 'en_curso');
+          setActiveMeetingId(inProgress?.id || data.meetings[0].id);
+        }
+      }
+      if (data.motions) setMotions(data.motions);
+      if (data.commitments) setCommitments(data.commitments);
+      if (data.qualityFactors) setQualityFactors(data.qualityFactors);
+      if (data.qualityMappings) setQualityMappings(data.qualityMappings);
+      if (data.accessRequests) setAccessRequests(data.accessRequests);
+      if (data.notifications) setNotifications(data.notifications);
+      if (data.digitalSeals) setDigitalSeals(data.digitalSeals);
+    } catch (err) {
+      console.error('[AppContext] Error loading bootstrap data from backend:', err);
+    }
+  }, [currentUser.id, activeMeetingId]);
 
-  const [commitments, setCommitments] = useState<Commitment[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.COMMITMENTS);
-    return saved ? JSON.parse(saved) : INITIAL_COMMITMENTS;
-  });
-
-  const [qualityFactors, setQualityFactors] = useState<QualityFactor[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.QUALITY_FACTORS);
-    return saved ? JSON.parse(saved) : INITIAL_QUALITY_FACTORS;
-  });
-
-  const [qualityMappings, setQualityMappings] = useState<ActQualityMapping[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.MAPPINGS);
-    return saved ? JSON.parse(saved) : INITIAL_QUALITY_MAPPINGS;
-  });
-
-  const [accessRequests, setAccessRequests] = useState<AccessRequest[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.ACCESS_REQ);
-    return saved ? JSON.parse(saved) : INITIAL_ACCESS_REQUESTS;
-  });
-
-  const [notifications, setNotifications] = useState<InstitutionalNotification[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
-    return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
-  });
-
-  // LocalStorage synchronizers
+  // Connect WebSocket and Subscribe to Real-time Events
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.USER_ID, currentUserId);
-  }, [currentUserId]);
+    loadBootstrapData();
+    realtime.connect();
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
-  }, [users]);
+    const unsubConnection = realtime.on('connection:established', () => {
+      setIsLiveSyncConnected(true);
+    });
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.ESTAMENTOS, JSON.stringify(estamentos));
-  }, [estamentos]);
+    const unsubUserCreated = realtime.on('user:created', (newUser: User) => {
+      setUsers((prev) => (prev.some((u) => u.id === newUser.id) ? prev : [...prev, newUser]));
+    });
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_ROLES, JSON.stringify(customRoles));
-  }, [customRoles]);
+    const unsubUserUpdated = realtime.on('user:updated', (updUser: User) => {
+      setUsers((prev) => prev.map((u) => (u.id === updUser.id ? updUser : u)));
+      if (currentUser.id === updUser.id) setCurrentUser(updUser);
+    });
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.MEETINGS, JSON.stringify(meetings));
-  }, [meetings]);
+    const unsubUserDeleted = realtime.on('user:deleted', ({ id }: { id: string }) => {
+      setUsers((prev) => prev.filter((u) => u.id !== id));
+    });
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.MOTIONS, JSON.stringify(motions));
-  }, [motions]);
+    const unsubMeetingCreated = realtime.on('meeting:created', (m: Meeting) => {
+      setMeetings((prev) => [m, ...prev.filter((item) => item.id !== m.id)]);
+      if (!activeMeetingId) setActiveMeetingId(m.id);
+    });
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.COMMITMENTS, JSON.stringify(commitments));
-  }, [commitments]);
+    const unsubMeetingUpdated = realtime.on('meeting:updated', (m: Meeting) => {
+      setMeetings((prev) => prev.map((item) => (item.id === m.id ? m : item)));
+    });
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.QUALITY_FACTORS, JSON.stringify(qualityFactors));
-  }, [qualityFactors]);
+    const unsubMeetingClosed = realtime.on('meeting:closed', ({ meeting, seal }: { meeting: Meeting; seal: DigitalActSeal }) => {
+      setMeetings((prev) => prev.map((item) => (item.id === meeting.id ? meeting : item)));
+      if (seal) setDigitalSeals((prev) => [seal, ...prev.filter((s) => s.id !== seal.id)]);
+    });
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.MAPPINGS, JSON.stringify(qualityMappings));
-  }, [qualityMappings]);
+    const unsubMotionCreated = realtime.on('motion:created', (mot: Motion) => {
+      setMotions((prev) => [mot, ...prev.filter((m) => m.id !== mot.id)]);
+    });
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.ACCESS_REQ, JSON.stringify(accessRequests));
-  }, [accessRequests]);
+    const unsubVoteCast = realtime.on('motion:vote_cast', ({ motionId, vote }: { motionId: string; vote: any }) => {
+      setMotions((prev) =>
+        prev.map((m) => {
+          if (m.id !== motionId) return m;
+          return {
+            ...m,
+            votes: {
+              ...m.votes,
+              [vote.userId]: vote,
+            },
+          };
+        })
+      );
+    });
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications));
-  }, [notifications]);
+    const unsubMotionFinalized = realtime.on('motion:finalized', (finalized: Motion) => {
+      setMotions((prev) => prev.map((m) => (m.id === finalized.id ? finalized : m)));
+    });
 
+    const unsubCommitmentCreated = realtime.on('commitment:created', (com: Commitment) => {
+      setCommitments((prev) => [com, ...prev.filter((c) => c.id !== com.id)]);
+    });
+
+    const unsubCommitmentEvidence = realtime.on('commitment:evidence_submitted', ({ commitment }: { commitment: Commitment }) => {
+      setCommitments((prev) => prev.map((c) => (c.id === commitment.id ? commitment : c)));
+    });
+
+    const unsubCommitmentAudited = realtime.on('commitment:audited', (com: Commitment) => {
+      setCommitments((prev) => prev.map((c) => (c.id === com.id ? com : c)));
+    });
+
+    const unsubCommitmentAlert = realtime.on('commitment:alert_sent', (com: Commitment) => {
+      setCommitments((prev) => prev.map((c) => (c.id === com.id ? com : c)));
+    });
+
+    const unsubNotification = realtime.on('notification:new', (notif: InstitutionalNotification) => {
+      setNotifications((prev) => [notif, ...prev.filter((n) => n.id !== notif.id)]);
+    });
+
+    const unsubQualityFactorCreated = realtime.on('quality:factor_created', (fact: QualityFactor) => {
+      setQualityFactors((prev) => [...prev.filter((f) => f.id !== fact.id), fact]);
+    });
+
+    const unsubQualityFactorDeleted = realtime.on('quality:factor_deleted', ({ id }: { id: string }) => {
+      setQualityFactors((prev) => prev.filter((f) => f.id !== id));
+    });
+
+    const unsubQualityFactorsReset = realtime.on('quality:factors_reset', () => {
+      setQualityFactors([]);
+    });
+
+    const unsubQualityMappingCreated = realtime.on('quality:mapping_created', (map: ActQualityMapping) => {
+      setQualityMappings((prev) => [map, ...prev.filter((m) => m.id !== map.id)]);
+    });
+
+    const unsubQualityMappingDeleted = realtime.on('quality:mapping_deleted', ({ id }: { id: string }) => {
+      setQualityMappings((prev) => prev.filter((m) => m.id !== id));
+    });
+
+    return () => {
+      unsubConnection();
+      unsubUserCreated();
+      unsubUserUpdated();
+      unsubUserDeleted();
+      unsubMeetingCreated();
+      unsubMeetingUpdated();
+      unsubMeetingClosed();
+      unsubMotionCreated();
+      unsubVoteCast();
+      unsubMotionFinalized();
+      unsubCommitmentCreated();
+      unsubCommitmentEvidence();
+      unsubCommitmentAudited();
+      unsubCommitmentAlert();
+      unsubNotification();
+      unsubQualityFactorCreated();
+      unsubQualityFactorDeleted();
+      unsubQualityFactorsReset();
+      unsubQualityMappingCreated();
+      unsubQualityMappingDeleted();
+    };
+  }, [loadBootstrapData]);
+
+  // Switch User Profile
   const switchUser = (userId: string) => {
     const target = users.find((u) => u.id === userId);
     if (target) {
-      setCurrentUserId(target.id);
+      setCurrentUser(target);
+      setApiUserId(target.id);
+      realtime.identify(target.id);
     }
   };
 
+  // Switch Role
   const switchRole = (role: UserRole) => {
-    const target = users.find((u) => u.role === role);
-    if (target) {
-      setCurrentUserId(target.id);
+    const updated = { ...currentUser, role };
+    setCurrentUser(updated);
+  };
+
+  // Google Workspace SSO Authentication
+  const signInWithGoogle = async (): Promise<User | null> => {
+    try {
+      const res = await googleSignIn();
+      if (res) {
+        setGoogleUser({
+          email: res.email,
+          name: res.name,
+          photoURL: res.photoURL,
+        });
+
+        const ssoResult = await api.loginGoogleSSO(res.email, res.name);
+        if (ssoResult.user) {
+          setCurrentUser(ssoResult.user);
+          setApiUserId(ssoResult.user.id);
+          realtime.identify(ssoResult.user.id);
+          setUsers((prev) => {
+            const exists = prev.some((u) => u.id === ssoResult.user.id);
+            return exists ? prev.map((u) => (u.id === ssoResult.user.id ? ssoResult.user : u)) : [...prev, ssoResult.user];
+          });
+          return ssoResult.user;
+        }
+      }
+      return null;
+    } catch (err) {
+      console.error('[AppContext] Error during Google SSO sign-in:', err);
+      throw err;
     }
   };
 
-  // Miembros del Comité CRUD
-  const createUser = (userData: Omit<User, 'id' | 'avatarInitials'>): User => {
-    const parts = userData.name.trim().split(' ');
-    const initials = parts.length > 1
-      ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
-      : userData.name.substring(0, 2).toUpperCase();
+  const signOutGoogle = async () => {
+    await logoutGoogle();
+    setGoogleUser(null);
+    if (users.length > 0) {
+      setCurrentUser(users[0]);
+      setApiUserId(users[0].id);
+      realtime.identify(users[0].id);
+    }
+  };
 
-    const newUser: User = {
-      ...userData,
-      id: `usr-${Date.now()}`,
-      avatarInitials: initials,
-      active: true,
-    };
-
+  // User Management
+  const createUser = async (userData: Omit<User, 'id' | 'avatarInitials'>): Promise<User> => {
+    const newUser = await api.createUser(userData);
     setUsers((prev) => [...prev, newUser]);
-    addNotification({
-      title: 'Nuevo Miembro Registrado',
-      message: `Se ha registrado a ${newUser.name} como ${newUser.roleLabel} representando al ${newUser.estamentoName || 'Comité'}.`,
-      recipientRoles: ['presidente', 'seguimiento', 'autoevaluacion'],
-      type: 'auditoria',
-    });
     return newUser;
   };
 
-  const updateUser = (id: string, updates: Partial<User>) => {
-    setUsers((prev) =>
-      prev.map((u) => {
-        if (u.id !== id) return u;
-        let initials = u.avatarInitials;
-        if (updates.name) {
-          const parts = updates.name.trim().split(' ');
-          initials = parts.length > 1
-            ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
-            : updates.name.substring(0, 2).toUpperCase();
-        }
-        return { ...u, ...updates, avatarInitials: initials };
-      })
-    );
+  const updateUser = async (id: string, updates: Partial<User>) => {
+    const updated = await api.updateUser(id, updates);
+    setUsers((prev) => prev.map((u) => (u.id === id ? updated : u)));
+    if (currentUser.id === id) setCurrentUser(updated);
   };
 
-  const deleteUser = (id: string) => {
-    if (users.length <= 1) {
-      alert('No se puede eliminar el único usuario administrador del sistema.');
-      return;
-    }
+  const deleteUser = async (id: string) => {
+    await api.deleteUser(id);
     setUsers((prev) => prev.filter((u) => u.id !== id));
-    if (currentUserId === id) {
-      const remaining = users.filter((u) => u.id !== id);
-      if (remaining[0]) setCurrentUserId(remaining[0].id);
-    }
   };
 
-  // Estamentos CRUD
-  const createEstamento = (data: Omit<Estamento, 'id'>): Estamento => {
-    const newEst: Estamento = {
-      ...data,
-      id: `est-${Date.now()}`,
-    };
-    setEstamentos((prev) => [...prev, newEst]);
-    return newEst;
+  // Estamentos Management
+  const createEstamento = async (data: Omit<Estamento, 'id'>): Promise<Estamento> => {
+    const created = await api.createEstamento(data);
+    setEstamentos((prev) => [...prev, created]);
+    return created;
   };
 
-  const updateEstamento = (id: string, updates: Partial<Estamento>) => {
-    setEstamentos((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, ...updates } : e))
-    );
+  const updateEstamento = async (id: string, updates: Partial<Estamento>) => {
+    const updated = await api.updateEstamento(id, updates);
+    setEstamentos((prev) => prev.map((e) => (e.id === id ? updated : e)));
   };
 
   const deleteEstamento = (id: string) => {
     setEstamentos((prev) => prev.filter((e) => e.id !== id));
   };
 
-  // Custom Roles CRUD
-  const createCustomRole = (data: Omit<CustomRole, 'id'>): CustomRole => {
-    const newRole: CustomRole = {
-      ...data,
-      id: `rol-${Date.now()}`,
-    };
-    setCustomRoles((prev) => [...prev, newRole]);
-    return newRole;
+  // Custom Roles
+  const createCustomRole = async (data: Omit<CustomRole, 'id'>): Promise<CustomRole> => {
+    const created = await api.createRole(data);
+    setCustomRoles((prev) => [...prev, created]);
+    return created;
   };
 
   const updateCustomRole = (id: string, updates: Partial<CustomRole>) => {
-    setCustomRoles((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, ...updates } : r))
-    );
+    setCustomRoles((prev) => prev.map((r) => (r.id === id ? { ...r, ...updates } : r)));
   };
 
   const deleteCustomRole = (id: string) => {
     setCustomRoles((prev) => prev.filter((r) => r.id !== id));
   };
 
-  const addNotification = (notif: Omit<InstitutionalNotification, 'id' | 'date' | 'read'>) => {
-    const newNotif: InstitutionalNotification = {
-      ...notif,
-      id: `notif-${Date.now()}`,
-      date: new Date().toISOString().replace('T', ' ').substring(0, 16),
-      read: false,
-    };
-    setNotifications((prev) => [newNotif, ...prev]);
+  // Meetings Management
+  const createMeeting = async (newMeeting: Omit<Meeting, 'id' | 'quorumPresentCount' | 'quorumTotalRequired'>): Promise<Meeting> => {
+    const created = await api.createMeeting(newMeeting);
+    setMeetings((prev) => [created, ...prev]);
+    setActiveMeetingId(created.id);
+    return created;
   };
 
-  const markNotificationRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
+  const updateMeeting = async (id: string, updates: Partial<Meeting>) => {
+    const updated = await api.updateMeeting(id, updates);
+    setMeetings((prev) => prev.map((m) => (m.id === id ? updated : m)));
   };
 
-  // Meetings CRUD
-  const createMeeting = (newMeetingData: Omit<Meeting, 'id' | 'quorumPresentCount' | 'quorumTotalRequired'>): Meeting => {
-    const newMeeting: Meeting = {
-      ...newMeetingData,
-      id: `meet-${Date.now()}`,
-      quorumPresentCount: 0,
-      quorumTotalRequired: Math.ceil((newMeetingData.attendees.length || 1) / 2),
-    };
-    setMeetings((prev) => [newMeeting, ...prev]);
-    addNotification({
-      title: `Nueva Convocatoria: ${newMeeting.code}`,
-      message: `Se ha programado la reunión ${newMeeting.type.toUpperCase()}: ${newMeeting.title} para el ${newMeeting.date} a las ${newMeeting.startTime}.`,
-      recipientRoles: ['presidente', 'miembro', 'seguimiento', 'autoevaluacion', 'invitado_externo'],
-      meetingCode: newMeeting.code,
-      type: 'citacion',
-    });
-    return newMeeting;
-  };
-
-  const updateMeeting = (id: string, updates: Partial<Meeting>) => {
-    setMeetings((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, ...updates } : m))
-    );
-  };
-
-  const addAgendaItem = (
+  const addAgendaItem = async (
     meetingId: string,
     item: Omit<AgendaItem, 'id' | 'agreements' | 'deliberations' | 'driveAttachments'>
   ) => {
+    const target = meetings.find((m) => m.id === meetingId);
+    if (!target) return;
+
     const newItem: AgendaItem = {
       ...item,
       id: `item-${Date.now()}`,
@@ -383,418 +432,223 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       deliberations: '',
       driveAttachments: [],
     };
-    setMeetings((prev) =>
-      prev.map((m) => {
-        if (m.id !== meetingId) return m;
-        return {
-          ...m,
-          agendaItems: [...m.agendaItems, newItem],
-        };
-      })
-    );
+
+    const updatedAgenda = [...(target.agendaItems || []), newItem];
+    await updateMeeting(meetingId, { agendaItems: updatedAgenda });
   };
 
-  const updateAgendaItem = (meetingId: string, itemId: string, updates: Partial<AgendaItem>) => {
-    setMeetings((prev) =>
-      prev.map((m) => {
-        if (m.id !== meetingId) return m;
-        return {
-          ...m,
-          agendaItems: m.agendaItems.map((it) =>
-            it.id === itemId ? { ...it, ...updates } : it
-          ),
-        };
-      })
-    );
-  };
+  const updateAgendaItem = async (meetingId: string, itemId: string, updates: Partial<AgendaItem>) => {
+    const target = meetings.find((m) => m.id === meetingId);
+    if (!target) return;
 
-  const deleteAgendaItem = (meetingId: string, itemId: string) => {
-    setMeetings((prev) =>
-      prev.map((m) => {
-        if (m.id !== meetingId) return m;
-        return {
-          ...m,
-          agendaItems: m.agendaItems.filter((it) => it.id !== itemId),
-        };
-      })
-    );
-  };
-
-  const sendCitations = (meetingId: string, recipientEmails: string[], note?: string) => {
-    const meeting = meetings.find((m) => m.id === meetingId);
-    if (!meeting) return;
-    addNotification({
-      title: `Citación Enviada: ${meeting.code}`,
-      message: `Se enviaron ${recipientEmails.length} citaciones institucionales vía Google Workspace. ${note || ''}`,
-      recipientRoles: ['presidente', 'miembro', 'seguimiento', 'autoevaluacion', 'invitado_externo'],
-      meetingCode: meeting.code,
-      type: 'citacion',
-    });
-  };
-
-  const closeMeeting = (meetingId: string, notes: string) => {
-    const now = new Date();
-    const signature = `${now.toISOString().substring(0, 10)} ${now.toLocaleTimeString()} (${currentUser.name} - Certificado Digital PKI #${meetingId.slice(-4).toUpperCase()})`;
-    setMeetings((prev) =>
-      prev.map((m) => {
-        if (m.id !== meetingId) return m;
-        return {
-          ...m,
-          status: 'cerrada',
-          closedAt: now.toISOString(),
-          signedByPresident: true,
-          presidentSignatureDate: signature,
-          generalObservations: notes || m.generalObservations,
-        };
-      })
+    const updatedAgenda = (target.agendaItems || []).map((item) =>
+      item.id === itemId ? { ...item, ...updates } : item
     );
 
-    addNotification({
-      title: `Acta Cerrada y Firmada Oficialmente`,
-      message: `El acta ${meetings.find(m => m.id === meetingId)?.code} ha sido cerrada y firmada por el Presidente. Queda disponible para mapeo de autoevaluación.`,
-      recipientRoles: ['autoevaluacion', 'presidente', 'miembro', 'seguimiento'],
-      type: 'auditoria',
-    });
+    await updateMeeting(meetingId, { agendaItems: updatedAgenda });
+  };
+
+  const deleteAgendaItem = async (meetingId: string, itemId: string) => {
+    const target = meetings.find((m) => m.id === meetingId);
+    if (!target) return;
+
+    const updatedAgenda = (target.agendaItems || []).filter((item) => item.id !== itemId);
+    await updateMeeting(meetingId, { agendaItems: updatedAgenda });
+  };
+
+  const sendCitations = async (meetingId: string, recipientEmails: string[], note?: string) => {
+    await api.sendCitations(meetingId, recipientEmails, note);
+  };
+
+  const closeMeeting = async (meetingId: string, notes: string) => {
+    const res = await api.closeMeeting(meetingId, notes);
+    setMeetings((prev) => prev.map((m) => (m.id === meetingId ? res.meeting : m)));
+    if (res.seal) setDigitalSeals((prev) => [res.seal, ...prev]);
   };
 
   // Motions & Real-time Voting
-  const calculateMotionResult = (motion: Motion) => {
-    const votesArr = Object.values(motion.votes);
-    let aFavor = 0;
-    let enContra = 0;
-    let abstencion = 0;
-
-    votesArr.forEach((v) => {
-      if (v.option === 'a_favor') aFavor++;
-      else if (v.option === 'en_contra') enContra++;
-      else if (v.option === 'abstencion') abstencion++;
-    });
-
-    const totalVotes = votesArr.length;
-    const votingMembersCount = users.filter((u) => u.hasVote !== false && u.role !== 'invitado_externo').length || 1;
-    const votingQuorum = Math.round((totalVotes / votingMembersCount) * 100);
-
-    let approved = false;
-    if (motion.majorityRequired === 'simple') {
-      approved = aFavor > enContra;
-    } else if (motion.majorityRequired === 'cualificada_dos_tercios') {
-      approved = aFavor >= Math.ceil((totalVotes * 2) / 3);
-    } else if (motion.majorityRequired === 'unanime') {
-      approved = aFavor === totalVotes && totalVotes > 0;
-    }
-
-    return {
-      aFavor,
-      enContra,
-      abstencion,
-      totalVotes,
-      quorumPercentage: Math.min(votingQuorum, 100),
-      approved,
-    };
-  };
-
-  const createMotion = (data: {
+  const createMotion = async (data: {
     meetingId: string;
     agendaItemId?: string;
     title: string;
     description: string;
     majorityRequired: Motion['majorityRequired'];
-  }): Motion => {
-    const newMotion: Motion = {
-      id: `mot-${Date.now()}`,
-      meetingId: data.meetingId,
-      agendaItemId: data.agendaItemId,
-      title: data.title,
-      description: data.description,
-      proposedBy: currentUser.name,
-      proposedAt: new Date().toISOString(),
-      status: 'abierta',
-      majorityRequired: data.majorityRequired,
-      votes: {},
-      result: {
-        aFavor: 0,
-        enContra: 0,
-        abstencion: 0,
-        totalVotes: 0,
-        quorumPercentage: 0,
-        approved: false,
-      },
-    };
-
-    setMotions((prev) => [newMotion, ...prev]);
-
-    addNotification({
-      title: 'Nueva Moción para Votación',
-      message: `${currentUser.name} ha formulado la moción: "${data.title}". Los miembros autorizados pueden emitir su voto.`,
-      recipientRoles: ['miembro', 'presidente'],
-      type: 'moción',
-    });
-
-    return newMotion;
+  }): Promise<Motion> => {
+    const created = await api.createMotion(data);
+    setMotions((prev) => [created, ...prev]);
+    return created;
   };
 
-  const castVote = (motionId: string, option: VoteOption) => {
-    setMotions((prev) =>
-      prev.map((mot) => {
-        if (mot.id !== motionId) return mot;
-        const newVotes = {
-          ...mot.votes,
-          [currentUser.id]: {
-            userId: currentUser.id,
-            userName: currentUser.name,
-            userRole: currentUser.role,
-            option,
-            timestamp: new Date().toISOString(),
-          },
-        };
-        const updatedMot: Motion = {
-          ...mot,
-          votes: newVotes,
-        };
-        updatedMot.result = calculateMotionResult(updatedMot);
-        return updatedMot;
-      })
-    );
+  const castVote = async (motionId: string, option: VoteOption) => {
+    const res = await api.castVote(motionId, option);
+    setMotions((prev) => prev.map((m) => (m.id === motionId ? res.motion : m)));
   };
 
-  const finalizeMotion = (motionId: string) => {
-    setMotions((prev) =>
-      prev.map((mot) => {
-        if (mot.id !== motionId) return mot;
-        const result = calculateMotionResult(mot);
-        const finalStatus = result.approved ? 'aprobada' : 'rechazada';
-        return {
-          ...mot,
-          status: finalStatus,
-          result,
-        };
-      })
-    );
+  const finalizeMotion = async (motionId: string) => {
+    const finalized = await api.finalizeMotion(motionId);
+    setMotions((prev) => prev.map((m) => (m.id === motionId ? finalized : m)));
   };
 
-  // Commitments
-  const createCommitment = (
+  // Commitments & Audit
+  const createCommitment = async (
     data: Omit<Commitment, 'id' | 'assignedAt' | 'status' | 'evidences' | 'assignedBy'>
-  ): Commitment => {
-    const newCommitment: Commitment = {
-      ...data,
-      id: `com-${Date.now()}`,
-      assignedBy: currentUser.name,
-      assignedAt: new Date().toISOString().substring(0, 10),
-      status: 'pendiente',
-      evidences: [],
-    };
-    setCommitments((prev) => [newCommitment, ...prev]);
-
-    addNotification({
-      title: `Nuevo Compromiso Asignado: ${newCommitment.title}`,
-      message: `Se ha asignado a ${newCommitment.responsibleName} con fecha límite ${newCommitment.dueDate}.`,
-      recipientRoles: ['seguimiento', 'miembro', 'invitado_externo'],
-      recipientEmail: newCommitment.responsibleEmail,
-      type: 'compromiso',
-    });
-
-    return newCommitment;
+  ): Promise<Commitment> => {
+    const created = await api.createCommitment(data);
+    setCommitments((prev) => [created, ...prev]);
+    return created;
   };
 
-  const submitCommitmentEvidence = (
+  const submitCommitmentEvidence = async (
     commitmentId: string,
     description: string,
     driveUrl: string,
     fileName?: string
   ) => {
-    const newEvidence: CommitmentEvidence = {
-      id: `ev-${Date.now()}`,
-      submittedAt: new Date().toISOString().substring(0, 10),
-      submittedBy: currentUser.name,
-      description,
-      driveUrl,
-      fileName: fileName || 'Evidencia_Documento_Adjunto.pdf',
-    };
-
-    setCommitments((prev) =>
-      prev.map((com) => {
-        if (com.id !== commitmentId) return com;
-        return {
-          ...com,
-          status: 'en_revision',
-          evidences: [...com.evidences, newEvidence],
-        };
-      })
-    );
-
-    addNotification({
-      title: `Evidencia de Compromiso Enviada`,
-      message: `${currentUser.name} ha radicado evidencias para el compromiso "${commitments.find(c => c.id === commitmentId)?.title}". Requiere validación del Encargado de Seguimiento.`,
-      recipientRoles: ['seguimiento'],
-      type: 'compromiso',
-    });
+    const updated = await api.submitEvidence(commitmentId, { description, driveUrl, fileName });
+    setCommitments((prev) => prev.map((c) => (c.id === commitmentId ? updated : c)));
   };
 
-  const auditCommitment = (
-    commitmentId: string,
-    newStatus: CommitmentStatus,
-    notes: string
-  ) => {
-    const now = new Date().toISOString().substring(0, 10);
-    setCommitments((prev) =>
-      prev.map((com) => {
-        if (com.id !== commitmentId) return com;
-        return {
-          ...com,
-          status: newStatus,
-          auditedBy: currentUser.name,
-          auditNotes: notes,
-          auditedAt: now,
-        };
-      })
-    );
+  const auditCommitment = async (commitmentId: string, newStatus: CommitmentStatus, notes: string) => {
+    const updated = await api.auditCommitment(commitmentId, newStatus, notes);
+    setCommitments((prev) => prev.map((c) => (c.id === commitmentId ? updated : c)));
+  };
 
-    addNotification({
-      title: `Compromiso Auditado: Estado ${newStatus.toUpperCase()}`,
-      message: `El Encargado de Seguimiento ha validado el compromiso. Observación: ${notes}`,
-      recipientRoles: ['presidente', 'miembro', 'invitado_externo'],
-      type: 'auditoria',
-    });
+  const sendCommitmentDeadlineAlert = async (
+    commitmentId: string,
+    customSubject?: string,
+    customBody?: string
+  ): Promise<{ success: boolean; message: string }> => {
+    const res = await api.sendCommitmentAlert(commitmentId);
+    setCommitments((prev) => prev.map((c) => (c.id === commitmentId ? res.commitment : c)));
+    return res;
+  };
+
+  const sendBatchDeadlineAlerts = async (): Promise<{ sentCount: number; recipients: string[] }> => {
+    const res = await api.sendBatchAlerts();
+    await loadBootstrapData();
+    return res;
   };
 
   // Access Requests
-  const requestActAccess = (meetingId: string, meetingCode: string, purpose: string) => {
-    const newReq: AccessRequest = {
-      id: `req-${Date.now()}`,
-      meetingId,
-      meetingCode,
-      requestedBy: currentUser.name,
-      userRole: currentUser.role,
-      purpose,
-      requestedAt: new Date().toISOString(),
-      status: 'pendiente',
-    };
-    setAccessRequests((prev) => [newReq, ...prev]);
-
-    addNotification({
-      title: `Solicitud de Acceso a Acta Histórica`,
-      message: `${currentUser.name} solicita consultar el acta ${meetingCode}. Motivo: ${purpose}`,
-      recipientRoles: ['presidente', 'seguimiento'],
-      type: 'acceso',
-    });
+  const requestActAccess = async (meetingId: string, meetingCode: string, purpose: string) => {
+    const created = await api.requestActAccess({ meetingId, meetingCode, purpose });
+    setAccessRequests((prev) => [created, ...prev]);
   };
 
-  const resolveAccessRequest = (
-    requestId: string,
-    status: 'aprobado' | 'rechazado',
-    note?: string
-  ) => {
-    setAccessRequests((prev) =>
-      prev.map((req) => {
-        if (req.id !== requestId) return req;
-        return {
-          ...req,
-          status,
-          resolvedBy: currentUser.name,
-          resolvedAt: new Date().toISOString(),
-          resolutionNote: note || (status === 'aprobado' ? 'Solicitud autorizada por la Presidencia.' : 'Denegada.'),
-        };
-      })
-    );
-
-    addNotification({
-      title: `Solicitud de Acceso ${status.toUpperCase()}`,
-      message: `Su solicitud de acceso al acta ha sido ${status}. Nota: ${note || 'Sin nota adicional.'}`,
-      recipientRoles: ['miembro'],
-      type: 'acceso',
-    });
+  const resolveAccessRequest = async (requestId: string, status: 'aprobado' | 'rechazado', note?: string) => {
+    const updated = await api.resolveAccessRequest(requestId, status, note);
+    setAccessRequests((prev) => prev.map((r) => (r.id === requestId ? updated : r)));
   };
 
   // Quality Framework
-  const addQualityFactor = (factor: Omit<QualityFactor, 'id' | 'features'>): QualityFactor => {
-    const newFactor: QualityFactor = {
-      ...factor,
-      id: `fact-${Date.now()}`,
-      features: [],
-    };
-    setQualityFactors((prev) => [...prev, newFactor]);
-    return newFactor;
+  const addQualityFactor = async (factor: Omit<QualityFactor, 'id' | 'features'>): Promise<QualityFactor> => {
+    const created = await api.createQualityFactor(factor);
+    setQualityFactors((prev) => [...prev, created]);
+    return created;
   };
 
-  const addQualityFeature = (factorId: string, feature: Omit<QualityFeature, 'id' | 'aspects'>) => {
+  const addQualityFeature = async (factorId: string, feature: Omit<QualityFeature, 'id' | 'aspects'>) => {
+    const target = qualityFactors.find((f) => f.id === factorId);
+    if (!target) return;
+
     const newFeature: QualityFeature = {
       ...feature,
       id: `feat-${Date.now()}`,
       aspects: [],
     };
-    setQualityFactors((prev) =>
-      prev.map((f) => (f.id === factorId ? { ...f, features: [...f.features, newFeature] } : f))
-    );
+
+    const updated = {
+      ...target,
+      features: [...target.features, newFeature],
+    };
+
+    await api.createQualityFactor(updated);
+    setQualityFactors((prev) => prev.map((f) => (f.id === factorId ? updated : f)));
   };
 
-  const addQualityAspect = (factorId: string, featureId: string, aspect: Omit<QualityAspect, 'id'>) => {
+  const addQualityAspect = async (factorId: string, featureId: string, aspect: Omit<QualityAspect, 'id'>) => {
+    const target = qualityFactors.find((f) => f.id === factorId);
+    if (!target) return;
+
     const newAspect: QualityAspect = {
       ...aspect,
       id: `asp-${Date.now()}`,
     };
-    setQualityFactors((prev) =>
-      prev.map((f) => {
-        if (f.id !== factorId) return f;
-        return {
-          ...f,
-          features: f.features.map((feat) =>
-            feat.id === featureId
-              ? { ...feat, aspects: [...feat.aspects, newAspect] }
-              : feat
-          ),
-        };
-      })
+
+    const updatedFeatures = target.features.map((feat) =>
+      feat.id === featureId ? { ...feat, aspects: [...feat.aspects, newAspect] } : feat
     );
+
+    const updated = { ...target, features: updatedFeatures };
+    await api.createQualityFactor(updated);
+    setQualityFactors((prev) => prev.map((f) => (f.id === factorId ? updated : f)));
   };
 
-  const deleteQualityFactor = (factorId: string) => {
+  const deleteQualityFactor = async (factorId: string) => {
+    await api.deleteQualityFactor(factorId);
     setQualityFactors((prev) => prev.filter((f) => f.id !== factorId));
   };
 
-  const clearQualityFactors = () => {
+  const clearQualityFactors = async () => {
+    await api.resetQualityFactors();
     setQualityFactors([]);
   };
 
-  const loadCnaAbetTemplate = () => {
+  const loadCnaAbetTemplate = async () => {
+    for (const factor of CNA_ABET_TEMPLATE_FACTORS) {
+      await api.createQualityFactor(factor);
+    }
     setQualityFactors(CNA_ABET_TEMPLATE_FACTORS);
   };
 
-  const createQualityMapping = (data: Omit<ActQualityMapping, 'id' | 'mappedAt' | 'mappedBy'>) => {
-    const newMapping: ActQualityMapping = {
-      ...data,
-      id: `map-${Date.now()}`,
-      mappedBy: currentUser.name,
-      mappedAt: new Date().toISOString(),
-    };
-    setQualityMappings((prev) => [newMapping, ...prev]);
-
-    addNotification({
-      title: `Acta Indexada en Acreditación`,
-      message: `Se vinculó el acuerdo del acta ${data.meetingCode} al Aspecto ${data.aspectCode} (${data.factorCode}).`,
-      recipientRoles: ['autoevaluacion', 'presidente'],
-      type: 'auditoria',
-    });
+  const createQualityMapping = async (data: Omit<ActQualityMapping, 'id' | 'mappedAt' | 'mappedBy'>) => {
+    const created = await api.createQualityMapping(data);
+    setQualityMappings((prev) => [created, ...prev]);
   };
 
-  const deleteQualityMapping = (mappingId: string) => {
+  const deleteQualityMapping = async (mappingId: string) => {
+    await api.deleteQualityMapping(mappingId);
     setQualityMappings((prev) => prev.filter((m) => m.id !== mappingId));
   };
 
+  // Digital Seals & PKI
+  const getActSeal = async (meetingId: string): Promise<DigitalActSeal | undefined> => {
+    try {
+      const seal = await api.getActSeal(meetingId);
+      return seal;
+    } catch {
+      return digitalSeals.find((s) => s.meetingId === meetingId);
+    }
+  };
+
+  const verifyActSeal = async (params: {
+    sha256Hash?: string;
+    signaturePkiToken?: string;
+    canonicalPayload?: string;
+    sealedAt?: string;
+    signerEmail?: string;
+  }) => {
+    return api.verifyActSeal(params);
+  };
+
+  // Notifications
+  const markNotificationRead = (id: string) => {
+    api.markNotificationRead(id).catch(console.error);
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  };
+
+  const addNotification = (notif: Omit<InstitutionalNotification, 'id' | 'date' | 'read'>) => {
+    const newNotif: InstitutionalNotification = {
+      ...notif,
+      id: `notif-${Date.now()}`,
+      date: new Date().toISOString().slice(0, 10),
+      read: false,
+    };
+    setNotifications((prev) => [newNotif, ...prev]);
+  };
+
   const resetAllData = () => {
-    localStorage.clear();
-    setUsers(INITIAL_USERS);
-    setEstamentos(INITIAL_ESTAMENTOS);
-    setCustomRoles(INITIAL_CUSTOM_ROLES);
-    setMeetings([]);
-    setMotions([]);
-    setCommitments([]);
-    setQualityFactors(INITIAL_QUALITY_FACTORS);
-    setQualityMappings([]);
-    setAccessRequests([]);
-    setNotifications([]);
-    setCurrentUserId(INITIAL_USERS[0]?.id || 'usr-admin-principal');
-    setActiveMeetingId('');
+    loadBootstrapData();
   };
 
   return (
@@ -804,6 +658,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         users,
         switchUser,
         switchRole,
+        googleUser,
+        signInWithGoogle,
+        signOutGoogle,
         createUser,
         updateUser,
         deleteUser,
@@ -833,6 +690,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         createCommitment,
         submitCommitmentEvidence,
         auditCommitment,
+        sendCommitmentDeadlineAlert,
+        sendBatchDeadlineAlerts,
         accessRequests,
         requestActAccess,
         resolveAccessRequest,
@@ -846,10 +705,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         qualityMappings,
         createQualityMapping,
         deleteQualityMapping,
+        digitalSeals,
+        getActSeal,
+        verifyActSeal,
         notifications,
         markNotificationRead,
         addNotification,
         resetAllData,
+        isLiveSyncConnected,
       }}
     >
       {children}

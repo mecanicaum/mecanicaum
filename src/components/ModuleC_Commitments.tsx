@@ -16,7 +16,11 @@ import {
   Check, 
   X,
   AlertTriangle,
-  FolderOpen
+  FolderOpen,
+  Mail,
+  BellRing,
+  Copy,
+  Sparkles
 } from 'lucide-react';
 
 export const ModuleC_Commitments: React.FC = () => {
@@ -25,6 +29,8 @@ export const ModuleC_Commitments: React.FC = () => {
     commitments, 
     submitCommitmentEvidence, 
     auditCommitment, 
+    sendCommitmentDeadlineAlert,
+    sendBatchDeadlineAlerts,
     meetings,
     accessRequests,
     requestActAccess,
@@ -52,9 +58,114 @@ export const ModuleC_Commitments: React.FC = () => {
   const [reqPurpose, setReqPurpose] = useState('');
   const [requestSuccess, setRequestSuccess] = useState(false);
 
+  // Email Notification & Alert System State
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [alertTargetCommitment, setAlertTargetCommitment] = useState<Commitment | null>(null);
+  const [alertSubject, setAlertSubject] = useState('');
+  const [alertBody, setAlertBody] = useState('');
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailSuccessMessage, setEmailSuccessMessage] = useState<string | null>(null);
+  const [copiedText, setCopiedText] = useState(false);
+  const [batchSending, setBatchSending] = useState(false);
+  const [batchResultBanner, setBatchResultBanner] = useState<string | null>(null);
+
   const isTracker = currentUser.role === 'seguimiento';
   const isPresident = currentUser.role === 'presidente';
   const isExternal = currentUser.role === 'invitado_externo';
+
+  // Deadline calculation helpers
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const getDaysRemaining = (dueDateStr: string) => {
+    const due = new Date(dueDateStr);
+    due.setHours(0, 0, 0, 0);
+    return Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  };
+
+  const overdueList = commitments.filter(
+    (c) => c.status !== 'cumplido' && getDaysRemaining(c.dueDate) < 0
+  );
+  const dueSoonList = commitments.filter(
+    (c) => c.status !== 'cumplido' && getDaysRemaining(c.dueDate) >= 0 && getDaysRemaining(c.dueDate) <= 7
+  );
+  const totalAtRisk = overdueList.length + dueSoonList.length;
+
+  const handleOpenEmailAlertModal = (com: Commitment) => {
+    setAlertTargetCommitment(com);
+    const days = getDaysRemaining(com.dueDate);
+    const urgency = days < 0 
+      ? `[VENCIDO HACE ${Math.abs(days)} DÍAS]` 
+      : days === 0 
+      ? `[VENCE HOY]` 
+      : `[VENCE EN ${days} DÍAS]`;
+
+    const subject = `${urgency} Alerta de Compromiso Próximo a Vencer - Acta ${com.meetingCode} - SIG-Currículo`;
+    const body = `Estimado(a) ${com.responsibleName},
+
+Le notificamos a través del Sistema Integral de Gestión del Comité Curricular (SIG-Currículo) que el compromiso institucional asignado a su cargo en la sesión del acta ${com.meetingCode}:
+
+📌 TÍTULO: ${com.title}
+📅 FECHA LÍMITE: ${com.dueDate} (${days < 0 ? `Vencido hace ${Math.abs(days)} días` : days === 0 ? 'Vence el día de hoy' : `Restan ${days} días calendario`})
+🎯 PRIORIDAD: ${com.priority.toUpperCase()}
+
+DESCRIPCIÓN Y ALCANCE:
+${com.description}
+
+Le recordamos radicar oportunamente las evidencias documentales o actas de entrega correspondientes en el repositorio oficial de Google Drive para la debida auditoría técnica por parte del Encargado de Seguimiento.
+
+Enlace para radicación de evidencias:
+https://drive.google.com/drive/folders/umayor-evidencias-comite-curriculo
+
+Atentamente,
+Secretaría de Seguimiento y Control
+Comité Curricular de Ingeniería
+Universidad Mayor
+`;
+
+    setAlertSubject(subject);
+    setAlertBody(body);
+    setEmailSuccessMessage(null);
+    setCopiedText(false);
+    setShowEmailModal(true);
+  };
+
+  const handleSendSingleEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!alertTargetCommitment) return;
+    setEmailSending(true);
+    const res = await sendCommitmentDeadlineAlert(alertTargetCommitment.id, alertSubject, alertBody);
+    setEmailSending(false);
+    setEmailSuccessMessage(res.message);
+
+    // Refresh selected commitment if matching
+    if (selectedCommitment?.id === alertTargetCommitment.id) {
+      setSelectedCommitment({
+        ...selectedCommitment,
+        lastReminderSentAt: new Date().toISOString(),
+        reminderCount: (selectedCommitment.reminderCount || 0) + 1,
+      });
+    }
+
+    setTimeout(() => {
+      setShowEmailModal(false);
+      setEmailSuccessMessage(null);
+    }, 2200);
+  };
+
+  const handleSendBatchAlerts = async () => {
+    setBatchSending(true);
+    const res = await sendBatchDeadlineAlerts();
+    setBatchSending(false);
+    if (res.sentCount === 0) {
+      setBatchResultBanner('No se registraron compromisos con plazos próximos a vencer (< 7 días) o vencidos.');
+    } else {
+      setBatchResultBanner(`¡Éxito! Se despacharon ${res.sentCount} alertas formales por correo electrónico a: ${res.recipients.join(', ')}.`);
+    }
+    setTimeout(() => {
+      setBatchResultBanner(null);
+    }, 7000);
+  };
 
   // Filtered commitments
   const filteredCommitments = commitments.filter((c) => {
@@ -172,6 +283,82 @@ export const ModuleC_Commitments: React.FC = () => {
         </div>
       </div>
 
+      {/* Batch Notification Feedback Banner */}
+      {batchResultBanner && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50/90 p-4 shadow-xs flex items-center justify-between gap-3 text-xs text-blue-950">
+          <div className="flex items-center gap-2">
+            <Mail className="h-4 w-4 text-blue-600 shrink-0" />
+            <span className="font-semibold">{batchResultBanner}</span>
+          </div>
+          <button
+            onClick={() => setBatchResultBanner(null)}
+            className="text-blue-600 hover:text-blue-900 font-bold p-1"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Deadline Email Notification & Alert System Panel */}
+      {commitments.length > 0 && !isExternal && (
+        <div className={`rounded-xl border p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 transition-all ${
+          totalAtRisk > 0 
+            ? 'border-amber-300 bg-gradient-to-r from-amber-50/90 via-white to-amber-50/40' 
+            : 'border-slate-200 bg-white'
+        }`}>
+          <div className="flex items-start sm:items-center gap-3">
+            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+              totalAtRisk > 0 
+                ? 'bg-amber-500 text-white shadow-xs' 
+                : 'bg-emerald-100 text-emerald-800'
+            }`}>
+              {totalAtRisk > 0 ? <BellRing className="h-5 w-5 animate-pulse" /> : <Mail className="h-5 w-5" />}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                  Sistema de Notificaciones & Alertas Preventivas por Correo
+                </h3>
+                {totalAtRisk > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-200/80 text-amber-900">
+                    {totalAtRisk} en riesgo
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-600 mt-0.5 leading-snug">
+                {totalAtRisk > 0 ? (
+                  <>
+                    Se detectaron <strong className="text-amber-900">{dueSoonList.length} compromisos próximos a vencer (&le; 7 días)</strong> y <strong className="text-rose-700">{overdueList.length} vencidos</strong>. Despache recordatorios formales a los responsables para agilizar la radicación de evidencias.
+                  </>
+                ) : (
+                  <>
+                    Semáforo Conforme: Todos los compromisos vigentes tienen plazos holgados (&gt; 7 días) o han sido cumplidos y auditados.
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+
+          {(isTracker || isPresident) && (
+            <div className="shrink-0 flex items-center gap-2">
+              <button
+                onClick={handleSendBatchAlerts}
+                disabled={batchSending}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold text-white shadow-xs transition-colors ${
+                  totalAtRisk > 0 
+                    ? 'bg-amber-600 hover:bg-amber-700' 
+                    : 'bg-slate-900 hover:bg-slate-800'
+                } disabled:opacity-50`}
+                title="Despachar notificaciones automáticas por correo a los responsables en riesgo"
+              >
+                <Send className="h-3.5 w-3.5" />
+                {batchSending ? 'Despachando Correos...' : 'Despachar Alertas Masivas por Correo'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
         {/* Status Segmented Filters */}
@@ -283,6 +470,44 @@ export const ModuleC_Commitments: React.FC = () => {
                       <span>{com.evidences.length} evidencia(s) cargada(s) para revisión</span>
                     </div>
                   )}
+
+                  {/* Deadline & Email Notification Alert Badges */}
+                  <div className="mt-2.5 flex flex-wrap items-center justify-between gap-1.5 pt-2 border-t border-slate-100 text-[10px]">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {com.status !== 'cumplido' && getDaysRemaining(com.dueDate) <= 7 && getDaysRemaining(com.dueDate) >= 0 && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                          <Clock className="h-3 w-3 text-amber-600" />
+                          {getDaysRemaining(com.dueDate) === 0 ? '¡Vence Hoy!' : `Vence en ${getDaysRemaining(com.dueDate)} d`}
+                        </span>
+                      )}
+                      {com.status !== 'cumplido' && getDaysRemaining(com.dueDate) < 0 && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded font-bold bg-rose-50 text-rose-800 border border-rose-200">
+                          <AlertTriangle className="h-3 w-3 text-rose-600" />
+                          Vencido hace {Math.abs(getDaysRemaining(com.dueDate))} d
+                        </span>
+                      )}
+                      {com.lastReminderSentAt && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                          <Mail className="h-2.5 w-2.5" />
+                          Aviso enviado ({com.reminderCount || 1}x)
+                        </span>
+                      )}
+                    </div>
+
+                    {(isTracker || isPresident) && com.status !== 'cumplido' && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenEmailAlertModal(com);
+                        }}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 hover:text-blue-900 bg-blue-50/70 hover:bg-blue-100 px-2 py-1 rounded transition-colors"
+                        title="Enviar correo institucional formal de aviso de plazo"
+                      >
+                        <Mail className="h-3 w-3" />
+                        Notificar por Correo
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })
@@ -399,6 +624,47 @@ export const ModuleC_Commitments: React.FC = () => {
                     Sin observaciones de auditoría aún. El Encargado de Seguimiento validará los archivos una vez remitidos.
                   </p>
                 )}
+              </div>
+
+              {/* Email Notification / Alert Preventiva Section */}
+              <div className="border-t border-slate-100 pt-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold uppercase tracking-wider text-[11px] text-slate-700 flex items-center gap-1.5">
+                    <Mail className="h-3.5 w-3.5 text-blue-600" />
+                    Notificación & Alerta por Correo
+                  </h4>
+                  {(isTracker || isPresident) && selectedCommitment.status !== 'cumplido' && (
+                    <button
+                      onClick={() => handleOpenEmailAlertModal(selectedCommitment)}
+                      className="inline-flex items-center gap-1 text-xs rounded bg-blue-700 px-2.5 py-1 font-semibold text-white hover:bg-blue-800 transition-colors shadow-xs"
+                      title="Generar y despachar aviso formal al correo institucional"
+                    >
+                      <Send className="h-3 w-3" />
+                      Enviar Recordatorio
+                    </button>
+                  )}
+                </div>
+
+                <div className="rounded-lg border border-slate-100 bg-slate-50 p-2.5 text-[11px] space-y-1.5">
+                  <div className="flex items-center justify-between text-slate-600">
+                    <span>Destinatario Institucional:</span>
+                    <span className="font-mono text-slate-900 font-semibold truncate max-w-[180px]">{selectedCommitment.responsibleEmail}</span>
+                  </div>
+                  {selectedCommitment.lastReminderSentAt ? (
+                    <div className="flex items-center justify-between text-emerald-800 pt-1 border-t border-slate-200/60">
+                      <span className="flex items-center gap-1 font-medium">
+                        <Check className="h-3 w-3 text-emerald-600" /> Último recordatorio despachado:
+                      </span>
+                      <span className="font-mono text-[10px]">
+                        {selectedCommitment.lastReminderSentAt.replace('T', ' ').substring(0, 16)} ({selectedCommitment.reminderCount || 1} {selectedCommitment.reminderCount === 1 ? 'aviso' : 'avisos'})
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-slate-400 italic">
+                      Aún no se ha despachado alerta preventiva individual por correo a este responsable.
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -723,6 +989,142 @@ export const ModuleC_Commitments: React.FC = () => {
                   >
                     Radicar Solicitud
                   </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Enviar Notificación por Correo Electrónico */}
+      {showEmailModal && alertTargetCommitment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
+                  <Mail className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">
+                    Notificación Formal de Plazo por Correo
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-mono">
+                    Acta {alertTargetCommitment.meetingCode} · {alertTargetCommitment.title}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowEmailModal(false)}
+                className="text-slate-400 hover:text-slate-600 font-bold text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            {emailSuccessMessage ? (
+              <div className="p-6 text-center space-y-3 bg-emerald-50 rounded-xl border border-emerald-200">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 mx-auto">
+                  <CheckCircle className="h-6 w-6" />
+                </div>
+                <h4 className="text-sm font-bold text-emerald-950">Alerta de Correo Despachada</h4>
+                <p className="text-xs text-emerald-800 leading-relaxed">
+                  {emailSuccessMessage}
+                </p>
+                <p className="text-[10px] text-emerald-600">
+                  Se actualizó el historial de recordatorios y la bandeja de notificaciones institucionales.
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleSendSingleEmail} className="space-y-3.5 text-xs">
+                {/* Meta details */}
+                <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-[11px]">
+                  <div>
+                    <span className="text-slate-400 block">Destinatario / Responsable:</span>
+                    <strong className="text-slate-900 block truncate">{alertTargetCommitment.responsibleName}</strong>
+                    <span className="text-slate-500 font-mono text-[10px] truncate block">{alertTargetCommitment.responsibleEmail}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block">Fecha Límite / Estado:</span>
+                    <strong className="text-slate-900 font-mono block">{alertTargetCommitment.dueDate}</strong>
+                    <span className="text-amber-800 font-semibold text-[10px] block">
+                      {getDaysRemaining(alertTargetCommitment.dueDate) < 0 
+                        ? `Vencido hace ${Math.abs(getDaysRemaining(alertTargetCommitment.dueDate))} días`
+                        : getDaysRemaining(alertTargetCommitment.dueDate) === 0
+                        ? 'Vence el día de hoy'
+                        : `Vence en ${getDaysRemaining(alertTargetCommitment.dueDate)} días`}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                    Asunto del Correo Electrónico
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={alertSubject}
+                    onChange={(e) => setAlertSubject(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-medium text-slate-700">
+                      Cuerpo del Mensaje Formal Institucional
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(alertBody);
+                        setCopiedText(true);
+                        setTimeout(() => setCopiedText(false), 2000);
+                      }}
+                      className="text-[10px] text-blue-700 hover:underline inline-flex items-center gap-1 font-medium"
+                    >
+                      <Copy className="h-2.5 w-2.5" />
+                      {copiedText ? '¡Copiado!' : 'Copiar Texto'}
+                    </button>
+                  </div>
+                  <textarea
+                    rows={8}
+                    required
+                    value={alertBody}
+                    onChange={(e) => setAlertBody(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white p-2.5 text-[11px] font-sans text-slate-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                  <a
+                    href={`mailto:${encodeURIComponent(alertTargetCommitment.responsibleEmail)}?subject=${encodeURIComponent(alertSubject)}&body=${encodeURIComponent(alertBody)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-600 hover:text-slate-900 px-2 py-1.5 rounded hover:bg-slate-100"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Abrir en Gmail / Mailto
+                  </a>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowEmailModal(false)}
+                      className="rounded-lg border border-slate-200 px-3.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={emailSending}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-blue-700 px-4 py-1.5 text-xs font-semibold text-white hover:bg-blue-800 shadow-xs disabled:opacity-50"
+                    >
+                      <Send className="h-3 w-3" />
+                      {emailSending ? 'Despachando...' : 'Despachar Correo de Alerta'}
+                    </button>
+                  </div>
                 </div>
               </form>
             )}

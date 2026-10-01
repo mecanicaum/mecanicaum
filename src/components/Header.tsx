@@ -25,15 +25,31 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
     switchUser, 
     notifications, 
     markNotificationRead,
-    resetAllData 
+    resetAllData,
+    isLiveSyncConnected,
+    googleUser,
+    signInWithGoogle,
+    signOutGoogle
   } = useApp();
 
   const [showRoleSelector, setShowRoleSelector] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  const handleGoogleLogin = async () => {
+    setIsLoggingIn(true);
+    try {
+      await signInWithGoogle();
+    } catch (err: any) {
+      console.error('Error durante el inicio de sesión institucional:', err);
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
 
   // Filter unread notifications relevant to current role or direct email
   const userNotifications = notifications.filter(
-    (n) => n.recipientRoles.includes(currentUser.role) || n.recipientEmail === currentUser.email
+    (n) => (n.recipientRoles && n.recipientRoles.includes(currentUser.role)) || n.recipientEmail === currentUser.email
   );
   const unreadCount = userNotifications.filter((n) => !n.read).length;
 
@@ -90,9 +106,16 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
         </div>
       </div>
 
-      {/* Zone 2: Contextual Navigation Notice / Quick Tab Indicators */}
-      <div className="hidden lg:flex items-center gap-4 text-xs font-medium text-slate-600">
-        <span className="text-slate-400">Vista Activa:</span>
+      {/* Zone 2: Realtime Concurrency Indicator & Navigation Notice */}
+      <div className="hidden lg:flex items-center gap-3 text-xs font-medium text-slate-600">
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200">
+          <span className={`h-2 w-2 rounded-full ${isLiveSyncConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`}></span>
+          <span className="text-[11px] font-mono text-slate-700">
+            {isLiveSyncConnected ? 'Sincronización en Vivo (WebSocket)' : 'Conectando Servidor...'}
+          </span>
+        </div>
+        <span className="text-slate-300">|</span>
+        <span className="text-slate-400">Vista:</span>
         <span className="capitalize text-slate-900 font-semibold bg-slate-100 px-2.5 py-1 rounded">
           {currentTab.replace('_', ' ')}
         </span>
@@ -100,6 +123,46 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
 
       {/* Zone 3: Interactive Role Switcher, Notifications & Actions */}
       <div className="flex items-center gap-2 sm:gap-3">
+        {/* Google Workspace Single Sign-On Button / Connected Badge */}
+        {googleUser ? (
+          <div className="flex items-center gap-1.5 bg-blue-50/90 border border-blue-200 px-2.5 py-1 rounded-lg text-xs">
+            {googleUser.photoURL ? (
+              <img src={googleUser.photoURL} alt="Google Avatar" className="h-5 w-5 rounded-full" />
+            ) : (
+              <span className="h-2 w-2 rounded-full bg-blue-600"></span>
+            )}
+            <div className="hidden sm:block text-left">
+              <span className="text-[10px] font-bold text-blue-900 block leading-none">Google SSO</span>
+              <span className="text-[9px] text-blue-700 font-mono block leading-tight truncate max-w-[110px]">
+                {googleUser.email}
+              </span>
+            </div>
+            <button
+              onClick={signOutGoogle}
+              className="text-slate-400 hover:text-slate-700 p-0.5 ml-1 text-xs font-bold"
+              title="Cerrar sesión de Google Workspace"
+            >
+              ✕
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleGoogleLogin}
+            disabled={isLoggingIn}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs hover:border-slate-300 disabled:opacity-50"
+            title="Iniciar sesión con cuenta institucional de Google Workspace"
+          >
+            <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+            </svg>
+            <span className="hidden sm:inline">{isLoggingIn ? 'Autenticando...' : 'Google SSO'}</span>
+            <span className="sm:hidden">SSO</span>
+          </button>
+        )}
+
         {/* Institutional Role Switcher Dropdown */}
         <div className="relative">
           <button

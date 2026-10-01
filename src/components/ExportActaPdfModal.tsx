@@ -1,5 +1,6 @@
-import React, { useRef } from 'react';
-import { Meeting, Motion, Commitment, ActQualityMapping } from '../types';
+import React, { useRef, useState, useEffect } from 'react';
+import { Meeting, Motion, Commitment, ActQualityMapping, DigitalActSeal } from '../types';
+import { useApp } from '../context/AppContext';
 import { 
   Printer, 
   Download, 
@@ -14,7 +15,9 @@ import {
   Calendar,
   Clock,
   MapPin,
-  Check
+  Check,
+  Search,
+  Lock
 } from 'lucide-react';
 
 interface ExportActaPdfModalProps {
@@ -32,18 +35,71 @@ export const ExportActaPdfModal: React.FC<ExportActaPdfModalProps> = ({
   qualityMappings,
   onClose,
 }) => {
+  const { getActSeal, verifyActSeal, currentUser } = useApp();
   const printContainerRef = useRef<HTMLDivElement>(null);
+  const [seal, setSeal] = useState<DigitalActSeal | null>(null);
+  const [loadingSeal, setLoadingSeal] = useState(true);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyResult, setVerifyResult] = useState<{
+    isValid: boolean;
+    recomputedHash?: string;
+    expectedPkiToken?: string;
+    errorReason?: string;
+  } | null>(null);
 
   const meetingMotions = motions.filter((m) => m.meetingId === meeting.id);
   const meetingCommitments = commitments.filter((c) => c.meetingId === meeting.id);
   const meetingMappings = qualityMappings.filter((m) => m.meetingId === meeting.id);
 
+  useEffect(() => {
+    let isMounted = true;
+    getActSeal(meeting.id)
+      .then((res) => {
+        if (isMounted) {
+          setSeal(res || null);
+          setLoadingSeal(false);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setLoadingSeal(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [meeting.id, getActSeal]);
+
   const handlePrint = () => {
     window.print();
   };
 
-  // Generate a mock institutional verification hash if not present
-  const signatureHash = meeting.presidentSignatureDate || `SHA256:8f4c2e1b9a7d3f0e5b6a7c8d9e0f1a2b3c4d5e6f (${meeting.closedAt || new Date().toISOString()})`;
+  const handleVerifyServerIntegrity = async () => {
+    if (!seal) return;
+    setVerifying(true);
+    try {
+      const res = await verifyActSeal({
+        sha256Hash: seal.sha256Hash,
+        signaturePkiToken: seal.signaturePkiToken,
+        canonicalPayload: seal.canonicalPayload,
+        sealedAt: seal.sealedAt,
+        signerEmail: seal.signerEmail,
+      });
+      setVerifyResult(res.verification);
+    } catch (err: any) {
+      setVerifyResult({
+        isValid: false,
+        errorReason: err.message || 'Error de conexión con el servidor de certificación.',
+      });
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const sha256Display = seal?.sha256Hash || 'GENERANDO-SELLO-CRIPTOGRAFICO-SHA256...';
+  const pkiTokenDisplay = seal?.signaturePkiToken || 'PKI-SIGC-EN-ESPERA-DE-FIRMA-PRESIDENCIAL';
+  const sealedAtDisplay = seal?.sealedAt ? seal.sealedAt.replace('T', ' ').substring(0, 19) : (meeting.closedAt || meeting.date);
+  const signerNameDisplay = seal?.signedBy || currentUser.name;
+  const signerRoleDisplay = seal?.signerRole || 'Presidente del Comité Curricular';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-2 sm:p-4 backdrop-blur-xs overflow-y-auto">
@@ -55,11 +111,21 @@ export const ExportActaPdfModal: React.FC<ExportActaPdfModalProps> = ({
               {meeting.code}
             </span>
             <span className="text-xs font-medium text-slate-600">
-              Vista previa del Acta Oficial de Comité Curricular
+              Vista previa del Acta Oficial refrendada con Criptografía SHA-256
             </span>
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleVerifyServerIntegrity}
+              disabled={verifying || !seal}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 transition-colors shadow-xs disabled:opacity-50"
+              title="Auditar firma digital y hash SHA-256 en el servidor institucional"
+            >
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+              <span>{verifying ? 'Verificando...' : 'Auditar Integridad PKI'}</span>
+            </button>
+
             <button
               onClick={handlePrint}
               className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 transition-colors shadow-xs"
@@ -76,6 +142,30 @@ export const ExportActaPdfModal: React.FC<ExportActaPdfModalProps> = ({
           </div>
         </div>
 
+        {/* Verification Alert Banner if checked */}
+        {verifyResult && (
+          <div className={`px-6 py-2.5 text-xs border-b flex items-center justify-between print:hidden ${
+            verifyResult.isValid
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+              : 'bg-rose-50 border-rose-200 text-rose-900'
+          }`}>
+            <div className="flex items-center gap-2">
+              {verifyResult.isValid ? (
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              ) : (
+                <XCircle className="h-4 w-4 text-rose-600" />
+              )}
+              <span>
+                <strong>{verifyResult.isValid ? 'Integridad Verificada con Éxito:' : 'Fallo de Integridad:'}</strong>{' '}
+                {verifyResult.isValid
+                  ? `El hash SHA-256 del servidor coincide bit a bit. El acta no ha sufrido alteraciones.`
+                  : verifyResult.errorReason}
+              </span>
+            </div>
+            <button onClick={() => setVerifyResult(null)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+          </div>
+        )}
+
         {/* Scrollable Printable Document Body */}
         <div className="overflow-y-auto p-6 sm:p-10 font-sans text-slate-900 bg-white" id="printable-acta" ref={printContainerRef}>
           {/* Institutional Letterhead Header */}
@@ -83,7 +173,7 @@ export const ExportActaPdfModal: React.FC<ExportActaPdfModalProps> = ({
             <div className="flex justify-between items-center text-[10px] text-slate-500 uppercase tracking-widest font-mono">
               <span>República de Colombia</span>
               <span>Sistema Integrado de Calidad SIG-CURRÍCULO</span>
-              <span>Vigencia: 2026-2027</span>
+              <span>Vigencia: 2026-2028</span>
             </div>
 
             <div className="py-2">
@@ -99,289 +189,198 @@ export const ExportActaPdfModal: React.FC<ExportActaPdfModalProps> = ({
               <span className="font-bold text-slate-900 text-sm">
                 ACTA OFICIAL N°: {meeting.code}
               </span>
-              <span className="font-semibold text-slate-700 uppercase">
-                SESIÓN {meeting.type}
+              <span className="text-slate-600">
+                SESIÓN {meeting.type.toUpperCase()} · ESTADO: {meeting.status.toUpperCase()}
               </span>
             </div>
           </div>
 
-          {/* 1. General Meeting Coordinates */}
-          <div className="mt-5 rounded-lg border border-slate-300 p-4 bg-slate-50/50 text-xs grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <p className="text-slate-500 font-medium">Asunto / Denominación de la Sesión:</p>
-              <p className="font-bold text-slate-900 mt-0.5">{meeting.title}</p>
-            </div>
-            <div>
-              <p className="text-slate-500 font-medium">Fecha y Horario de Realización:</p>
-              <p className="font-bold text-slate-900 mt-0.5">
-                {meeting.date} · De {meeting.startTime} a {meeting.endTime} horas
-              </p>
-            </div>
-            <div>
-              <p className="text-slate-500 font-medium">Lugar / Modalidad:</p>
-              <p className="font-semibold text-slate-900 mt-0.5">
-                Modalidad {meeting.modality.toUpperCase()} ({meeting.locationOrUrl})
-              </p>
-            </div>
-            <div>
-              <p className="text-slate-500 font-medium">Quórum Reglamentario de Decisión:</p>
-              <p className="font-semibold text-slate-900 mt-0.5 text-emerald-800">
-                Constatado: {meeting.attendees.filter(a => a.present).length} de {meeting.attendees.length} miembros ({meeting.quorumPresentCount > 0 ? Math.round((meeting.quorumPresentCount / meeting.attendees.length) * 100) : 100}% de quórum)
-              </p>
-            </div>
-          </div>
-
-          {/* 2. Roll Call & Attendees */}
-          <div className="mt-6 space-y-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
-              1. Asistencia y Verificación de Integrantes
-            </h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border border-slate-200">
-                <thead className="bg-slate-100 font-semibold text-slate-700">
-                  <tr>
-                    <th className="py-2 px-3 border-b">Integrante</th>
-                    <th className="py-2 px-3 border-b">Rol / Representación</th>
-                    <th className="py-2 px-3 border-b text-center">Estado</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {meeting.attendees.map((att, i) => (
-                    <tr key={i}>
-                      <td className="py-1.5 px-3 font-medium text-slate-900">{att.userName}</td>
-                      <td className="py-1.5 px-3 text-slate-600">{att.role}</td>
-                      <td className="py-1.5 px-3 text-center">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${att.present ? 'text-emerald-800 bg-emerald-50' : 'text-slate-400'}`}>
-                          {att.present ? 'Presente' : 'Ausente con excusa'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* 3. Approved Agenda & Point-by-Point Deliberation */}
+          {/* 1. General Meeting Data */}
           <div className="mt-6 space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
-              2. Desarrollo del Orden del Día, Deliberaciones y Acuerdos
+              1. Datos Generales de la Sesión
             </h3>
 
-            {meeting.agendaItems.map((item, idx) => (
-              <div key={item.id} className="border border-slate-200 rounded-lg p-3.5 space-y-2 text-xs">
-                <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2">
-                  <div className="flex items-start gap-2">
-                    <span className="font-mono font-bold text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded">
-                      Punto {idx + 1}
-                    </span>
-                    <div>
-                      <h4 className="font-bold text-slate-950 text-sm leading-snug">
-                        {item.title}
-                      </h4>
-                      <p className="text-[11px] text-slate-500">
-                        Ponente: {item.presenter} · Duración: {item.estimatedMinutes} minutos
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {item.deliberations && (
-                  <div className="space-y-0.5">
-                    <span className="font-semibold text-slate-700 text-[11px] uppercase tracking-wide">
-                      Deliberaciones e intervenciones:
-                    </span>
-                    <p className="text-slate-800 leading-relaxed pl-2 border-l-2 border-slate-300">
-                      {item.deliberations}
-                    </p>
-                  </div>
-                )}
-
-                {item.agreements ? (
-                  <div className="space-y-0.5 bg-slate-50 p-2.5 rounded border border-slate-200">
-                    <span className="font-bold text-emerald-900 text-[11px] uppercase tracking-wide flex items-center gap-1">
-                      <Check className="h-3 w-3" /> Acuerdo Resolutivo Aprobado:
-                    </span>
-                    <p className="text-slate-900 font-medium leading-relaxed mt-0.5">
-                      {item.agreements}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-[11px] text-slate-400 italic">Sin acuerdo resolutivo registrado para este punto.</p>
-                )}
-
-                {item.driveAttachments && item.driveAttachments.length > 0 && (
-                  <div className="pt-1.5 text-[11px] text-slate-600 space-y-1">
-                    <span className="font-semibold text-slate-500 uppercase text-[10px]">
-                      Documentos y Evidencias Anexas (Google Drive):
-                    </span>
-                    <ul className="list-disc pl-4 space-y-0.5 font-mono text-[10px] text-blue-700">
-                      {item.driveAttachments.map((att, aIdx) => (
-                        <li key={aIdx} className="truncate">
-                          <strong>{att.name}</strong> ({att.type}): {att.url}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <div>
+                <span className="text-slate-500 block">Fecha de Realización:</span>
+                <strong className="font-semibold text-slate-900">{meeting.date}</strong>
               </div>
-            ))}
+              <div>
+                <span className="text-slate-500 block">Horario de Sesión:</span>
+                <strong className="font-semibold text-slate-900">{meeting.startTime} - {meeting.endTime}</strong>
+              </div>
+              <div>
+                <span className="text-slate-500 block">Modalidad:</span>
+                <strong className="font-semibold text-slate-900 capitalize">{meeting.modality}</strong>
+              </div>
+              <div>
+                <span className="text-slate-500 block">Lugar / Enlace:</span>
+                <strong className="font-semibold text-slate-900 truncate block">{meeting.locationOrUrl}</strong>
+              </div>
+            </div>
           </div>
 
-          {/* 4. Complete Motions and Real-time Voting History (Requested Feature) */}
+          {/* 2. Quorum and Attendance */}
           <div className="mt-6 space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-1">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                2. Verificación de Quórum Estatutario y Asistencia
+              </h3>
+              <span className="text-[11px] font-mono text-slate-600 font-semibold">
+                Quórum Verificado: {meeting.attendees.filter((a) => a.present).length} de {meeting.attendees.length} miembros presentes
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              {meeting.attendees.map((att, idx) => (
+                <div
+                  key={att.userId || idx}
+                  className="flex items-center justify-between p-2 rounded-lg border border-slate-200 bg-slate-50/70"
+                >
+                  <div>
+                    <span className="font-bold text-slate-900">{att.userName}</span>
+                    <span className="text-[10px] text-slate-500 block capitalize">{att.role}</span>
+                  </div>
+                  <span
+                    className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      att.present
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-rose-100 text-rose-800'
+                    }`}
+                  >
+                    {att.present ? 'Presente (Con Quórum)' : 'Ausente con Excusa'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 3. Orden del Día y Acuerdos */}
+          <div className="mt-6 space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
-              3. Historial Completo de Mociones y Votaciones Nominales
+              3. Desarrollo del Orden del Día, Deliberaciones y Acuerdos
             </h3>
 
-            {meetingMotions.length === 0 ? (
-              <p className="text-xs text-slate-400 italic">No se formularon mociones estatutarias para votación nominal en esta sesión.</p>
+            {meeting.agendaItems.length === 0 ? (
+              <p className="text-xs text-slate-400 italic">No se registraron puntos en el orden del día.</p>
             ) : (
-              meetingMotions.map((motion, mIdx) => {
-                const votesList = Object.values(motion.votes);
-                const res = motion.result || { aFavor: 0, enContra: 0, abstencion: 0, totalVotes: votesList.length, approved: true };
-
-                return (
-                  <div key={motion.id} className="border border-slate-300 rounded-lg p-3.5 space-y-2.5 text-xs bg-slate-50/30">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-200 pb-1.5">
+              <div className="space-y-4">
+                {meeting.agendaItems.map((item, idx) => (
+                  <div key={item.id || idx} className="rounded-xl border border-slate-200 p-4 space-y-2.5 text-xs bg-slate-50/50">
+                    <div className="flex items-start justify-between gap-2 border-b border-slate-200 pb-2">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-slate-800">
-                          Moción {mIdx + 1}:
+                        <span className="flex h-5 w-5 items-center justify-center rounded bg-slate-900 text-white font-bold text-[10px]">
+                          {item.order || idx + 1}
                         </span>
-                        <span className="font-bold text-slate-900 text-xs">
-                          {motion.title}
-                        </span>
+                        <h4 className="font-bold text-slate-900 text-sm">{item.title}</h4>
                       </div>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${motion.status === 'aprobada' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
-                        Dictamen: {motion.status.toUpperCase()}
+                      <span className="text-[11px] text-slate-500 shrink-0">
+                        Ponente: {item.presenter} ({item.estimatedMinutes || 20} min)
                       </span>
                     </div>
 
-                    <p className="text-slate-700 leading-relaxed text-[11px]">
-                      <strong>Texto Sometido a Voto:</strong> {motion.description}
-                    </p>
+                    <p className="text-slate-600 text-xs">{item.description}</p>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] bg-white p-2 rounded border border-slate-200">
-                      <div>
-                        <span className="text-slate-400">Mayoría Exigida:</span>
-                        <p className="font-semibold text-slate-800 capitalize">{motion.majorityRequired.replace(/_/g, ' ')}</p>
+                    {item.deliberations && (
+                      <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-1">
+                        <span className="font-bold text-[11px] text-slate-700 uppercase tracking-wider block">
+                          Resumen de Deliberaciones y Sustentación:
+                        </span>
+                        <p className="text-slate-800 leading-relaxed">{item.deliberations}</p>
                       </div>
-                      <div>
-                        <span className="text-slate-400">Votos Favorables:</span>
-                        <p className="font-bold text-emerald-700">{res.aFavor} votos</p>
-                      </div>
-                      <div>
-                        <span className="text-slate-400">Votos en Contra:</span>
-                        <p className="font-bold text-rose-700">{res.enContra} votos</p>
-                      </div>
-                      <div>
-                        <span className="text-slate-400">Abstenciones:</span>
-                        <p className="font-bold text-slate-600">{res.abstencion} votos</p>
-                      </div>
-                    </div>
+                    )}
 
-                    {/* Nominal Voters Roll */}
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                        Cómputo Nominal de Votantes:
-                      </span>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                        {votesList.map((v) => (
-                          <div key={v.userId} className="flex items-center justify-between bg-white px-2.5 py-1 rounded border border-slate-200 text-[10px]">
-                            <span className="font-medium text-slate-800">{v.userName}</span>
-                            <div className="flex items-center gap-1.5 font-mono">
-                              <span className={`font-bold uppercase ${v.option === 'a_favor' ? 'text-emerald-700' : v.option === 'en_contra' ? 'text-rose-700' : 'text-slate-500'}`}>
-                                {v.option.replace('_', ' ')}
-                              </span>
-                              <span className="text-slate-400 text-[9px]">{v.timestamp.slice(11, 19)}</span>
-                            </div>
-                          </div>
-                        ))}
+                    {item.agreements && (
+                      <div className="bg-emerald-50/60 p-3 rounded-lg border border-emerald-200 space-y-1">
+                        <span className="font-bold text-[11px] text-emerald-900 uppercase tracking-wider block">
+                          Acuerdo Aprobado por el Comité:
+                        </span>
+                        <p className="text-emerald-950 font-medium leading-relaxed">{item.agreements}</p>
                       </div>
-                    </div>
+                    )}
                   </div>
-                );
-              })
+                ))}
+              </div>
             )}
           </div>
 
-          {/* 5. Commitments Assigned */}
-          <div className="mt-6 space-y-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
-              4. Compromisos y Tareas Derivadas ({meetingCommitments.length})
-            </h3>
-            {meetingCommitments.length === 0 ? (
-              <p className="text-xs text-slate-400 italic">Sin compromisos asignados formalmente en esta sesión.</p>
-            ) : (
+          {/* 4. Votaciones Estatutarias */}
+          {meetingMotions.length > 0 && (
+            <div className="mt-6 space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
+                4. Registro Oficial de Votaciones Nominales
+              </h3>
+
+              <div className="space-y-3">
+                {meetingMotions.map((mot) => {
+                  const votes = Object.values(mot.votes || {});
+                  const aFavor = votes.filter((v) => v.option === 'a_favor').length;
+                  const enContra = votes.filter((v) => v.option === 'en_contra').length;
+                  const abst = votes.filter((v) => v.option === 'abstencion').length;
+
+                  return (
+                    <div key={mot.id} className="p-3 rounded-xl border border-slate-200 bg-slate-50 text-xs space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-bold text-slate-900">{mot.title}</h4>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                          mot.status === 'aprobada' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                        }`}>
+                          {mot.status} (Mayoría {mot.majorityRequired})
+                        </span>
+                      </div>
+                      <p className="text-slate-600 text-[11px]">{mot.description}</p>
+                      <div className="flex items-center gap-4 text-[11px] font-mono text-slate-700 bg-white p-2 rounded border border-slate-200">
+                        <span>A Favor: <strong>{aFavor}</strong></span>
+                        <span>En Contra: <strong>{enContra}</strong></span>
+                        <span>Abstenciones: <strong>{abst}</strong></span>
+                        <span>Total Votos: <strong>{votes.length}</strong></span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 5. Compromisos Derivados */}
+          {meetingCommitments.length > 0 && (
+            <div className="mt-6 space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
+                5. Compromisos y Tareas Asignadas
+              </h3>
+
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border border-slate-200">
-                  <thead className="bg-slate-100 font-semibold text-slate-700">
+                <table className="w-full text-left text-xs border border-slate-200 rounded-lg">
+                  <thead className="bg-slate-100 text-slate-700">
                     <tr>
-                      <th className="py-1.5 px-3 border-b">Tarea / Compromiso</th>
-                      <th className="py-1.5 px-3 border-b">Responsable</th>
-                      <th className="py-1.5 px-3 border-b">Plazo Límite</th>
-                      <th className="py-1.5 px-3 border-b text-center">Estado Auditoría</th>
+                      <th className="p-2 border-b">Tarea / Compromiso</th>
+                      <th className="p-2 border-b">Responsable</th>
+                      <th className="p-2 border-b">Fecha Límite</th>
+                      <th className="p-2 border-b">Prioridad</th>
+                      <th className="p-2 border-b">Estado</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
-                    {meetingCommitments.map((c) => (
-                      <tr key={c.id}>
-                        <td className="py-1.5 px-3 font-medium text-slate-900 max-w-xs">{c.title}</td>
-                        <td className="py-1.5 px-3 text-slate-600">{c.responsibleName}</td>
-                        <td className="py-1.5 px-3 font-mono text-slate-700">{c.dueDate}</td>
-                        <td className="py-1.5 px-3 text-center">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 text-slate-800">
-                            {c.status.replace('_', ' ')}
-                          </span>
-                        </td>
+                    {meetingCommitments.map((com) => (
+                      <tr key={com.id}>
+                        <td className="p-2 font-medium text-slate-900">{com.title}</td>
+                        <td className="p-2 text-slate-700">{com.responsibleName}</td>
+                        <td className="p-2 font-mono text-slate-600">{com.dueDate}</td>
+                        <td className="p-2 capitalize">{com.priority}</td>
+                        <td className="p-2 font-bold uppercase text-[10px]">{com.status}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            )}
-          </div>
-
-          {/* 6. Accreditation & Quality Factors Mapped */}
-          {meetingMappings.length > 0 && (
-            <div className="mt-6 space-y-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
-                5. Trazabilidad de Autoevaluación & Acreditación (CNA / ABET)
-              </h3>
-              <div className="space-y-1.5 text-xs">
-                {meetingMappings.map((map) => (
-                  <div key={map.id} className="p-2 rounded bg-purple-50/40 border border-purple-200 text-[11px]">
-                    <span className="font-mono font-bold text-purple-900">
-                      {map.factorCode} &gt; {map.featureCode} &gt; {map.aspectCode}: {map.aspectName}
-                    </span>
-                    <p className="text-slate-700 mt-0.5 italic">
-                      "{map.excerpt}"
-                    </p>
-                    <p className="text-purple-950 text-[10px] mt-0.5 font-medium">
-                      Aporte evidencial: {map.evidentialContribution}
-                    </p>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
 
-          {/* 7. Observations */}
-          {meeting.generalObservations && (
-            <div className="mt-6 space-y-1 text-xs">
-              <h3 className="font-bold uppercase tracking-wider text-slate-900">
-                Observaciones y Constancias Generales:
-              </h3>
-              <p className="text-slate-700 bg-slate-50 p-3 rounded border border-slate-200 leading-relaxed">
-                {meeting.generalObservations}
-              </p>
-            </div>
-          )}
-
-          {/* 8. Formal Digital Signature Block (Requested Feature) */}
+          {/* 6. Formal Digital Signature & Cryptographic Seal Block */}
           <div className="mt-10 pt-6 border-t-2 border-slate-900 space-y-6">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 text-center">
-              Constancia de Cierre y Certificación Digital del Acta
+              Constancia de Cierre y Certificación Digital del Acta (Validez Jurídica y Probatoria)
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center bg-slate-50 p-5 rounded-xl border border-slate-300">
@@ -391,7 +390,7 @@ export const ExportActaPdfModal: React.FC<ExportActaPdfModalProps> = ({
                   <QrCode className="h-16 w-16 text-slate-900" />
                 </div>
                 <span className="font-mono text-[9px] text-slate-500 mt-1 font-bold">
-                  VALIDACIÓN PKI
+                  VALIDACIÓN PKI SHA-256
                 </span>
                 <span className="text-[8px] text-slate-400">
                   sig-curriculo.umayor.edu.co/verify
@@ -401,61 +400,50 @@ export const ExportActaPdfModal: React.FC<ExportActaPdfModalProps> = ({
               {/* Digital Certificate Details */}
               <div className="md:col-span-9 space-y-2 text-xs">
                 <div className="flex items-center gap-1.5 text-emerald-800 font-bold text-xs uppercase">
-                  <ShieldCheck className="h-4 w-4" />
-                  Acta Oficial Firmada Digitalmente por la Presidencia
+                  <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                  Acta Refrendada Criptográficamente por la Presidencia del Comité
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-700">
                   <div>
-                    <span className="text-slate-400">Firmante Autorizado:</span>
-                    <p className="font-bold text-slate-900">Dr. Roberto Gómez Peña</p>
-                    <p className="text-[10px] text-slate-500">Presidente del Comité Curricular</p>
+                    <span className="text-slate-400">Firmante y Autoridad Emisora:</span>
+                    <p className="font-bold text-slate-900">{signerNameDisplay}</p>
+                    <p className="text-[10px] text-slate-500">{signerRoleDisplay} · Universidad Mayor</p>
                   </div>
                   <div>
-                    <span className="text-slate-400">Fecha y Hora de Cierre:</span>
-                    <p className="font-bold font-mono text-slate-900">
-                      {meeting.closedAt ? meeting.closedAt.replace('T', ' ').substring(0, 19) : meeting.date}
-                    </p>
-                    <p className="text-[10px] text-slate-500">Hora legal de la República de Colombia</p>
+                    <span className="text-slate-400">Estampa Temporal del Servidor (UTC):</span>
+                    <p className="font-bold font-mono text-slate-900">{sealedAtDisplay}</p>
+                    <p className="text-[10px] text-slate-500">Sello de Tiempo Certificado PKI</p>
                   </div>
                 </div>
 
-                <div className="bg-white p-2 rounded border border-slate-200 font-mono text-[10px] text-slate-600 break-all">
-                  <span className="font-bold text-slate-700">Token Hash de Trazabilidad: </span>
-                  {signatureHash}
+                <div className="bg-white p-2 rounded border border-slate-200 font-mono text-[10px] text-slate-700 space-y-1">
+                  <div>
+                    <strong className="text-slate-900">Hash Criptográfico SHA-256:</strong>
+                    <div className="break-all text-slate-800 select-all font-bold">{sha256Display}</div>
+                  </div>
+                  <div className="pt-1 border-t border-slate-100 text-[9px] text-slate-500">
+                    <strong>Token de Certificación PKI:</strong> {pkiTokenDisplay}
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Signature Lines for Roll */}
             <div className="pt-6 grid grid-cols-2 sm:grid-cols-3 gap-8 text-center text-xs">
-              <div>
-                <div className="border-b border-slate-400 pb-1 mb-1">
-                  <span className="font-serif italic text-slate-700 font-bold">Dr. Roberto Gómez Peña</span>
+              {meeting.attendees.slice(0, 3).map((att) => (
+                <div key={att.userId}>
+                  <div className="border-b border-slate-400 pb-1 mb-1">
+                    <span className="font-serif italic text-slate-700 font-bold">{att.userName}</span>
+                  </div>
+                  <p className="font-bold text-slate-900 capitalize">{att.role}</p>
+                  <p className="text-[10px] text-slate-500">Firma Registrada en Plataforma</p>
                 </div>
-                <p className="font-bold text-slate-900">Presidente del Comité</p>
-                <p className="text-[10px] text-slate-500">Firma Digital Certificada</p>
-              </div>
-
-              <div>
-                <div className="border-b border-slate-400 pb-1 mb-1">
-                  <span className="font-serif italic text-slate-700">Dra. Elena Morales Vélez</span>
-                </div>
-                <p className="font-bold text-slate-900">Miembro Representante</p>
-                <p className="text-[10px] text-slate-500">Voz y Voto Reglamentario</p>
-              </div>
-
-              <div>
-                <div className="border-b border-slate-400 pb-1 mb-1">
-                  <span className="font-serif italic text-slate-700">Ing. Carlos Restrepo Londoño</span>
-                </div>
-                <p className="font-bold text-slate-900">Encargado de Seguimiento</p>
-                <p className="text-[10px] text-slate-500">Secretaría Técnica</p>
-              </div>
+              ))}
             </div>
 
-            <div className="text-center text-[10px] text-slate-400 pt-4 border-t border-slate-200">
-              Documento expedido y refrendado electrónicamente bajo los lineamientos del Acuerdo del Consejo Superior N° 014 de la Universidad Mayor. Validez jurídica y probatoria plena.
+            <div className="text-center text-[10px] text-slate-400 pt-4 border-t border-slate-200 leading-relaxed">
+              Documento expedido y refrendado electrónicamente bajo el Acuerdo del Consejo Superior de la Universidad Mayor. Cumple con la Ley 527 de 1999 sobre firmas digitales y validez probatoria plena ante el Consejo Nacional de Acreditación (CNA) y pares evaluadores ABET.
             </div>
           </div>
         </div>

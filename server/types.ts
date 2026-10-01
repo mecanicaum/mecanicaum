@@ -1,29 +1,27 @@
-export type UserRole = 
-  | 'presidente' 
-  | 'miembro' 
-  | 'seguimiento' 
-  | 'autoevaluacion' 
-  | 'invitado_externo';
+export type UserRole = 'presidente' | 'miembro' | 'seguimiento' | 'autoevaluacion' | 'invitado_externo';
 
 export interface Estamento {
   id: string;
-  code: string; // e.g. "DOC", "EST", "EGR", "DIR", "PROD", "ADM"
-  name: string; // e.g. "Estamento Profesoral / Docente"
+  name: string;
+  code: string;
   description: string;
-  hasVote: boolean; // ¿Tiene voto reglamentario en el comité?
-  color: string; // e.g. "blue", "emerald", "purple", "amber", "slate"
+  category: 'docente' | 'estudiantil' | 'egresado' | 'directivo' | 'externo';
+  hasStatutoryVote: boolean;
+  active: boolean;
 }
 
 export interface CustomRole {
   id: string;
-  code: string; // e.g. "PRES_DIR", "REP_DOC", "SEC_TECNICA"
-  name: string; // e.g. "Presidente Decano"
+  name: string;
+  code: string;
   description: string;
-  baseCapability: UserRole; // Permiso RBAC base en el sistema
+  baseRole: UserRole;
   canVote: boolean;
-  canSign: boolean;
-  canAudit: boolean;
-  canTagQuality: boolean;
+  canSignActs: boolean;
+  canAuditCommitments: boolean;
+  canMapQuality: boolean;
+  isAdmin: boolean;
+  color: string;
 }
 
 export interface User {
@@ -31,17 +29,15 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
-  customRoleId?: string;
-  roleLabel: string;
+  roleId?: string;
   estamentoId?: string;
   estamentoName?: string;
-  faculty: string;
   department: string;
-  academicTitle?: string;
+  academicTitle: string;
   avatarInitials: string;
   isExternal?: boolean;
   hasVote?: boolean;
-  periodo?: string; // e.g. "2026 - 2028"
+  periodo?: string;
   active?: boolean;
 }
 
@@ -53,6 +49,22 @@ export interface MeetingAttendee {
   userName: string;
   role: string;
   present: boolean;
+}
+
+export interface AgendaItem {
+  id: string;
+  order: number;
+  title: string;
+  description: string;
+  presenter: string;
+  estimatedMinutes: number;
+  agreements: string;
+  deliberations: string;
+  driveAttachments: {
+    name: string;
+    url: string;
+    type: 'drive_doc' | 'drive_sheet' | 'drive_slide' | 'drive_folder';
+  }[];
 }
 
 export interface Meeting {
@@ -74,22 +86,7 @@ export interface Meeting {
   closedAt?: string;
   signedByPresident?: boolean;
   presidentSignatureDate?: string;
-}
-
-export interface AgendaItem {
-  id: string;
-  order: number;
-  title: string;
-  description: string;
-  presenter: string;
-  estimatedMinutes: number;
-  agreements: string;
-  deliberations: string;
-  driveAttachments: {
-    name: string;
-    url: string;
-    type: 'drive_doc' | 'drive_sheet' | 'drive_slide' | 'drive_folder';
-  }[];
+  cryptographicSealId?: string;
 }
 
 export type VoteOption = 'a_favor' | 'en_contra' | 'abstencion';
@@ -113,7 +110,7 @@ export interface Motion {
   proposedAt: string;
   status: 'abierta' | 'aprobada' | 'rechazada' | 'cerrada';
   majorityRequired: 'simple' | 'cualificada_dos_tercios' | 'unanime';
-  votes: Record<string, VoteRecord>; // userId -> VoteRecord
+  votes: Record<string, VoteRecord>;
   result?: {
     aFavor: number;
     enContra: number;
@@ -159,17 +156,16 @@ export interface Commitment {
   reminderCount?: number;
 }
 
-// Modelado de Nomenclaturas de Calidad CNA / ABET
 export interface QualityAspect {
   id: string;
-  code: string; // e.g. "12.1"
+  code: string;
   name: string;
   description: string;
 }
 
 export interface QualityFeature {
   id: string;
-  code: string; // e.g. "C12"
+  code: string;
   name: string;
   description: string;
   aspects: QualityAspect[];
@@ -177,10 +173,10 @@ export interface QualityFeature {
 
 export interface QualityFactor {
   id: string;
-  code: string; // e.g. "F3"
+  code: string;
   name: string;
-  framework: 'CNA' | 'ABET' | 'INSTITUCIONAL';
   description: string;
+  framework: 'CNA' | 'ABET' | 'Institucional';
   features: QualityFeature[];
 }
 
@@ -189,12 +185,11 @@ export interface ActQualityMapping {
   meetingId: string;
   meetingCode: string;
   agendaItemId: string;
-  agendaItemTitle: string;
-  factorCode: string;
-  featureCode: string;
+  aspectId: string;
   aspectCode: string;
   aspectName: string;
-  excerpt: string;
+  factorCode: string;
+  featureCode: string;
   evidentialContribution: string;
   mappedBy: string;
   mappedAt: string;
@@ -223,7 +218,7 @@ export interface InstitutionalNotification {
   recipientRoles?: UserRole[];
   recipientEmail?: string;
   meetingCode?: string;
-  type: 'citacion' | 'moción' | 'compromiso' | 'auditoria' | 'acceso' | 'sistema';
+  type: 'citacion' | 'compromiso' | 'auditoria' | 'acceso' | 'sistema';
 }
 
 export interface DigitalActSeal {
@@ -244,3 +239,15 @@ export interface DigitalActSeal {
   totalCommitments: number;
 }
 
+export interface ServerAuditLog {
+  id: string;
+  timestamp: string;
+  userId: string;
+  userName: string;
+  userRole: string;
+  action: string;
+  resource: string;
+  details: string;
+  ipAddress?: string;
+  payloadHash?: string;
+}

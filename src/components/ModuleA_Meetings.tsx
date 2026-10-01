@@ -65,7 +65,7 @@ export const ModuleA_Meetings: React.FC<ModuleAProps> = ({ onGoToLiveMeeting }) 
   const selectedMeeting = meetings.find((m) => m.id === selectedMeetingId) || meetings[0];
   const isPresident = currentUser.role === 'presidente';
 
-  const handleCreateMeeting = (e: React.FormEvent) => {
+  const handleCreateMeeting = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMeetingTitle.trim()) return;
 
@@ -93,7 +93,7 @@ export const ModuleA_Meetings: React.FC<ModuleAProps> = ({ onGoToLiveMeeting }) 
       },
     ];
 
-    const created = createMeeting({
+    const created = await createMeeting({
       code: newMeetingCode,
       type: newMeetingType,
       title: newMeetingTitle,
