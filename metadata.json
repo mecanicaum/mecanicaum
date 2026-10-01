@@ -1,0 +1,6 @@
+{
+  "name": "SIG-Curriculo: Gestion y Autoevaluacion de Comites Curriculares",
+  "description": "Sistema institucional para la planificacion, desarrollo en vivo, seguimiento de compromisos, votaciones y acreditacion/autoevaluacion de comites curriculares universitarios con matriz RBAC.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
