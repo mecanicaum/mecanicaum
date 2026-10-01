@@ -1,23 +1,22 @@
 import crypto from 'crypto';
 import { Meeting, Motion, Commitment, User, DigitalActSeal } from './types';
 
-const INSTITUTIONAL_SECRET_KEY = process.env.PKI_SECRET_KEY || 'umayor_sig_curriculo_secret_key_2026_acreditacion_cna_abet';
 const AUTHORITY_ISSUER = 'Universidad Mayor - Dirección de Autoevaluación y Calidad Académica - Autoridad de Certificación SIG-Currículo PKI v2.4';
 
 /**
- * Computes standard SHA-256 hash in hexadecimal representation
+ * Computes standard SHA-256 hash in hexadecimal representation (No secret keys required)
  */
 export function computeSha256(data: string): string {
   return crypto.createHash('sha256').update(data, 'utf8').digest('hex');
 }
 
 /**
- * Computes HMAC-SHA256 signature for PKI token validation
+ * Generates an institutional PKI certification token using deterministic SHA-256 hashing
  */
 export function generatePkiToken(sha256Hash: string, timestamp: string, signerEmail: string): string {
   const message = `${AUTHORITY_ISSUER}|${sha256Hash}|${timestamp}|${signerEmail}`;
-  const hmac = crypto.createHmac('sha256', INSTITUTIONAL_SECRET_KEY).update(message).digest('hex');
-  return `PKI-SIGC-${timestamp.replace(/[-:T.Z]/g, '').slice(0, 14)}-${hmac.slice(0, 32).toUpperCase()}`;
+  const tokenDigest = crypto.createHash('sha256').update(message, 'utf8').digest('hex');
+  return `PKI-SIGC-${timestamp.replace(/[-:T.Z]/g, '').slice(0, 14)}-${tokenDigest.slice(0, 32).toUpperCase()}`;
 }
 
 /**
