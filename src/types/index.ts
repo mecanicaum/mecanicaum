@@ -244,3 +244,13 @@ export interface DigitalActSeal {
   totalCommitments: number;
 }
 
+export interface UserSettings {
+  autoSaveInterval: number;
+  emailAlertsEnabled: boolean;
+  soundNotificationsEnabled: boolean;
+  compactTableMode: boolean;
+  activeAcademicPeriod: string;
+  institutionName: string;
+}
+
+

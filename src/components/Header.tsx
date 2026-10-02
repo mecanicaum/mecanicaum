@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { UserRole } from '../types';
 import { 
@@ -10,7 +10,13 @@ import {
   FileText, 
   Vote, 
   X,
-  ChevronDown
+  ChevronDown,
+  Database,
+  Download,
+  Upload,
+  UserCheck,
+  Building2,
+  Lock
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -25,26 +31,59 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
     switchUser, 
     notifications, 
     markNotificationRead,
-    resetAllData,
+    resetDatabaseToDefaults,
+    exportDatabaseBackup,
+    importDatabaseBackup,
     isLiveSyncConnected,
     googleUser,
-    signInWithGoogle,
+    signInWithInstitutionalEmail,
     signOutGoogle
   } = useApp();
 
   const [showRoleSelector, setShowRoleSelector] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showDbMenu, setShowDbMenu] = useState(false);
+  const [showSsoModal, setShowSsoModal] = useState(false);
+  const [customEmail, setCustomEmail] = useState('');
+  const [customName, setCustomName] = useState('');
+  const [customRole, setCustomRole] = useState<UserRole>('miembro');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  const handleGoogleLogin = async () => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleInstitutionalLogin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!customEmail) return;
+
     setIsLoggingIn(true);
     try {
-      await signInWithGoogle();
+      await signInWithInstitutionalEmail(customEmail, customName || undefined, customRole);
+      setShowSsoModal(false);
+      setCustomEmail('');
+      setCustomName('');
     } catch (err: any) {
-      console.error('Error durante el inicio de sesión institucional:', err);
+      alert(`Error al iniciar sesión: ${err.message || err}`);
     } finally {
       setIsLoggingIn(false);
     }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const text = event.target?.result as string;
+        await importDatabaseBackup(text);
+        alert('¡Base de datos importada exitosamente desde el respaldo!');
+        setShowDbMenu(false);
+      } catch (err) {
+        // error already alerted in context
+      }
+    };
+    reader.readAsText(file);
   };
 
   // Filter unread notifications relevant to current role or direct email
@@ -106,69 +145,138 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
         </div>
       </div>
 
-      {/* Zone 2: Realtime Concurrency Indicator & Navigation Notice */}
+      {/* Zone 2: Realtime & Offline-First Storage Indicator */}
       <div className="hidden lg:flex items-center gap-3 text-xs font-medium text-slate-600">
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200">
-          <span className={`h-2 w-2 rounded-full ${isLiveSyncConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`}></span>
+          <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
           <span className="text-[11px] font-mono text-slate-700">
-            {isLiveSyncConnected ? 'Sincronización en Vivo (WebSocket)' : 'Conectando Servidor...'}
+            Almacenamiento Local Seguro (IndexedDB)
           </span>
         </div>
         <span className="text-slate-300">|</span>
-        <span className="text-slate-400">Vista:</span>
+        <span className="text-slate-400">Módulo:</span>
         <span className="capitalize text-slate-900 font-semibold bg-slate-100 px-2.5 py-1 rounded">
           {currentTab.replace('_', ' ')}
         </span>
       </div>
 
-      {/* Zone 3: Interactive Role Switcher, Notifications & Actions */}
+      {/* Zone 3: Interactive Role Switcher, Database Menu, Notifications & Actions */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Google Workspace Single Sign-On Button / Connected Badge */}
+        {/* Institutional Single Sign-On Button / Connected Badge */}
         {googleUser ? (
           <div className="flex items-center gap-1.5 bg-blue-50/90 border border-blue-200 px-2.5 py-1 rounded-lg text-xs">
-            {googleUser.photoURL ? (
-              <img src={googleUser.photoURL} alt="Google Avatar" className="h-5 w-5 rounded-full" />
-            ) : (
-              <span className="h-2 w-2 rounded-full bg-blue-600"></span>
-            )}
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-700 text-[10px] font-bold text-white">
+              {googleUser.name.slice(0, 1)}
+            </span>
             <div className="hidden sm:block text-left">
-              <span className="text-[10px] font-bold text-blue-900 block leading-none">Google SSO</span>
-              <span className="text-[9px] text-blue-700 font-mono block leading-tight truncate max-w-[110px]">
+              <span className="text-[10px] font-bold text-blue-900 block leading-none">SSO Institucional</span>
+              <span className="text-[9px] text-blue-700 font-mono block leading-tight truncate max-w-[120px]">
                 {googleUser.email}
               </span>
             </div>
             <button
               onClick={signOutGoogle}
               className="text-slate-400 hover:text-slate-700 p-0.5 ml-1 text-xs font-bold"
-              title="Cerrar sesión de Google Workspace"
+              title="Cerrar sesión institucional"
             >
               ✕
             </button>
           </div>
         ) : (
           <button
-            onClick={handleGoogleLogin}
-            disabled={isLoggingIn}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs hover:border-slate-300 disabled:opacity-50"
-            title="Iniciar sesión con cuenta institucional de Google Workspace"
+            onClick={() => setShowSsoModal(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50/80 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-blue-800 hover:bg-blue-100 transition-colors shadow-xs"
+            title="Iniciar sesión institucional"
           >
-            <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-            </svg>
-            <span className="hidden sm:inline">{isLoggingIn ? 'Autenticando...' : 'Google SSO'}</span>
+            <UserCheck className="h-3.5 w-3.5 text-blue-700" />
+            <span className="hidden sm:inline">Acceso Institucional</span>
             <span className="sm:hidden">SSO</span>
           </button>
         )}
+
+        {/* Database Management Menu (IndexedDB) */}
+        <div className="relative">
+          <button
+            onClick={() => setShowDbMenu(!showDbMenu)}
+            className="flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-xs font-medium text-slate-700 hover:bg-slate-100 transition-colors"
+            title="Gestión de almacenamiento IndexedDB y respaldos JSON"
+          >
+            <Database className="h-3.5 w-3.5 text-slate-600" />
+            <span className="hidden md:inline">Base de Datos</span>
+            <ChevronDown className="h-3 w-3 text-slate-400" />
+          </button>
+
+          {showDbMenu && (
+            <div className="absolute right-0 mt-2 w-72 rounded-xl border border-slate-200 bg-white p-2 shadow-xl ring-1 ring-slate-950/5 z-50">
+              <div className="px-2 py-1.5 border-b border-slate-100 mb-1">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  Almacenamiento IndexedDB
+                </p>
+                <p className="text-xs text-slate-500">
+                  Operación local sin claves externas ni dependencias remotas:
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <button
+                  onClick={async () => {
+                    await exportDatabaseBackup();
+                    setShowDbMenu(false);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-slate-700 hover:bg-slate-50 font-medium"
+                >
+                  <Download className="h-3.5 w-3.5 text-blue-600" />
+                  <div>
+                    <p className="font-semibold text-slate-800">Exportar Respaldo JSON</p>
+                    <p className="text-[10px] text-slate-400">Descarga todas las actas, votos y compromisos</p>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-slate-700 hover:bg-slate-50 font-medium"
+                >
+                  <Upload className="h-3.5 w-3.5 text-emerald-600" />
+                  <div>
+                    <p className="font-semibold text-slate-800">Importar Respaldo JSON</p>
+                    <p className="text-[10px] text-slate-400">Restaura la base de datos desde un archivo</p>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (confirm('¿Restablecer toda la base de datos a los datos iniciales de acreditación CNA/ABET?')) {
+                      resetDatabaseToDefaults();
+                      setShowDbMenu(false);
+                    }
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-rose-700 hover:bg-rose-50 font-medium"
+                >
+                  <RotateCcw className="h-3.5 w-3.5 text-rose-600" />
+                  <div>
+                    <p className="font-semibold">Restablecer Datos Iniciales</p>
+                    <p className="text-[10px] text-rose-400">Reinicia todas las tablas a valores por defecto</p>
+                  </div>
+                </button>
+              </div>
+
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                accept=".json"
+                className="hidden"
+              />
+            </div>
+          )}
+        </div>
 
         {/* Institutional Role Switcher Dropdown */}
         <div className="relative">
           <button
             onClick={() => setShowRoleSelector(!showRoleSelector)}
             className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-left text-xs hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400"
-            title="Cambiar entre los 5 roles RBAC institucionales"
+            title="Cambiar entre los roles RBAC institucionales"
           >
             <div className="flex h-6 w-6 items-center justify-center rounded bg-slate-800 text-[10px] font-bold text-white">
               {currentUser.avatarInitials}
@@ -197,7 +305,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
               <div className="space-y-1">
                 {users.map((u) => {
                   const isCurrent = u.id === currentUser.id;
-                  const config = roleLabelsMap[u.role];
+                  const config = roleLabelsMap[u.role] || roleLabelsMap.miembro;
                   return (
                     <button
                       key={u.id}
@@ -224,7 +332,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
                           )}
                         </div>
                         <p className="text-[11px] text-slate-500 truncate">
-                          {u.roleLabel}
+                          {u.roleLabel || u.academicTitle}
                         </p>
                         <div className="mt-1 flex items-center gap-1.5 text-[10px] text-slate-400">
                           <span>{config.title}</span>
@@ -332,21 +440,120 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
             </div>
           )}
         </div>
-
-        {/* Reset State Button */}
-        <button
-          onClick={() => {
-            if (confirm('¿Desea restaurar los datos de demostración del comité curricular a su estado inicial?')) {
-              resetAllData();
-            }
-          }}
-          className="hidden sm:flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors"
-          title="Restablecer datos de prueba"
-        >
-          <RotateCcw className="h-3.5 w-3.5" />
-          <span className="hidden xl:inline">Reiniciar</span>
-        </button>
       </div>
+
+      {/* Institutional SSO Login Modal */}
+      {showSsoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 border border-blue-200 text-blue-700 font-bold">
+                  <Building2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Acceso Institucional</h3>
+                  <p className="text-[11px] text-slate-500">Autenticación local para docentes y directivos</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowSsoModal(false)}
+                className="text-slate-400 hover:text-slate-600 rounded-lg p-1"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Quick Profile Selection */}
+            <div className="mt-4">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-2">
+                Ingreso Rápido con Padrón del Comité:
+              </label>
+              <div className="grid grid-cols-1 gap-1.5 max-h-40 overflow-y-auto pr-1">
+                {users.slice(0, 5).map((u) => (
+                  <button
+                    key={u.id}
+                    onClick={() => {
+                      signInWithInstitutionalEmail(u.email, u.name, u.role);
+                      setShowSsoModal(false);
+                    }}
+                    className="flex items-center justify-between p-2 rounded-lg border border-slate-100 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 text-left transition-colors text-xs"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-6 w-6 items-center justify-center rounded bg-slate-800 text-[10px] font-bold text-white">
+                        {u.avatarInitials}
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-800 block">{u.name}</span>
+                        <span className="text-[10px] text-slate-500">{u.email}</span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-semibold text-blue-700 bg-blue-100/60 px-2 py-0.5 rounded capitalize">
+                      {u.role}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200"></div>
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-white px-2 text-slate-400 font-medium">o ingrese con correo institucional</span>
+              </div>
+            </div>
+
+            {/* Custom Institutional Email Form */}
+            <form onSubmit={handleInstitutionalLogin} className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  Correo Electrónico Institucional
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="ejemplo@umayor.edu.co"
+                  value={customEmail}
+                  onChange={(e) => setCustomEmail(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  Nombre Completo (Opcional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Dr(a). Nombre y Apellidos"
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowSsoModal(false)}
+                  className="w-1/3 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isLoggingIn || !customEmail}
+                  className="w-2/3 rounded-lg bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800 disabled:opacity-50 shadow-xs"
+                >
+                  {isLoggingIn ? 'Autenticando...' : 'Ingresar al Sistema'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

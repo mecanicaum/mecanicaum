@@ -122,6 +122,11 @@ class RealtimeClient {
     }, 3000);
   }
 
+  public onConnectionChange(callback: (connected: boolean) => void) {
+    callback(this.isConnected);
+    return this.on('connection:change', callback);
+  }
+
   public on(event: string, callback: EventCallback) {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
@@ -183,6 +188,7 @@ export const api = {
   getEstamentos: () => request<Estamento[]>('/estamentos'),
   createEstamento: (data: Partial<Estamento>) => request<Estamento>('/estamentos', { method: 'POST', body: JSON.stringify(data) }),
   updateEstamento: (id: string, data: Partial<Estamento>) => request<Estamento>(`/estamentos/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteEstamento: (id: string) => request<{ success: boolean }>(`/estamentos/${id}`, { method: 'DELETE' }),
   getRoles: () => request<CustomRole[]>('/roles'),
   createRole: (data: Partial<CustomRole>) => request<CustomRole>('/roles', { method: 'POST', body: JSON.stringify(data) }),
 
@@ -190,6 +196,9 @@ export const api = {
   getMeetings: () => request<Meeting[]>('/meetings'),
   createMeeting: (data: Partial<Meeting>) => request<Meeting>('/meetings', { method: 'POST', body: JSON.stringify(data) }),
   updateMeeting: (id: string, data: Partial<Meeting>) => request<Meeting>(`/meetings/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  addAgendaItem: (meetingId: string, item: any) => request<Meeting>(`/meetings/${meetingId}/agenda`, { method: 'POST', body: JSON.stringify(item) }),
+  updateAgendaItem: (meetingId: string, itemId: string, item: any) => request<Meeting>(`/meetings/${meetingId}/agenda/${itemId}`, { method: 'PUT', body: JSON.stringify(item) }),
+  deleteAgendaItem: (meetingId: string, itemId: string) => request<Meeting>(`/meetings/${meetingId}/agenda/${itemId}`, { method: 'DELETE' }),
   closeMeeting: (id: string, notes: string) => request<{ success: boolean; meeting: Meeting; seal: DigitalActSeal; message: string }>(`/meetings/${id}/close`, { method: 'POST', body: JSON.stringify({ notes }) }),
   sendCitations: (id: string, recipientEmails: string[], note?: string) => request<{ success: boolean; message: string }>(`/meetings/${id}/citations`, { method: 'POST', body: JSON.stringify({ recipientEmails, note }) }),
 

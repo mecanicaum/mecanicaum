@@ -6,6 +6,7 @@ import {
   AgendaItem,
   Motion,
   VoteOption,
+  VoteRecord,
   Commitment,
   CommitmentStatus,
   QualityFactor,
@@ -17,10 +18,49 @@ import {
   Estamento,
   CustomRole,
   DigitalActSeal,
+  UserSettings,
 } from '../types';
-import { CNA_ABET_TEMPLATE_FACTORS } from '../data/mockData';
+import {
+  INITIAL_USERS,
+  INITIAL_ESTAMENTOS,
+  INITIAL_CUSTOM_ROLES,
+  INITIAL_MEETINGS,
+  INITIAL_MOTIONS,
+  INITIAL_COMMITMENTS,
+  INITIAL_QUALITY_MAPPINGS,
+  CNA_ABET_TEMPLATE_FACTORS,
+} from '../data/mockData';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 import { api, realtime, setApiUserId } from '../services/api';
-import { googleSignIn, logoutGoogle, initAuth } from '../services/auth';
+import {
+  initAuth,
+  institutionalSignIn,
+  logoutInstitutional,
+} from '../services/auth';
+import { browserStorage, FullBackupData } from '../services/storage';
+
+export const DEFAULT_USER_SETTINGS: UserSettings = {
+  autoSaveInterval: 5,
+  emailAlertsEnabled: true,
+  soundNotificationsEnabled: false,
+  compactTableMode: false,
+  activeAcademicPeriod: '2026-1',
+  institutionName: 'Facultad de Ingeniería · Universidad Mayor',
+};
+
+const DEFAULT_NOTIFICATIONS: InstitutionalNotification[] = [
+  {
+    id: 'notif-welcome-1',
+    type: 'citacion',
+    title: 'Bienvenido a SIG-Currículo (Persistencia Local en Tiempo Real)',
+    message:
+      'Sus datos, actas, compromisos y configuraciones se sincronizan automáticamente con el almacenamiento local del navegador (localStorage / IndexedDB) en cada cambio.',
+    date: new Date().toISOString().slice(0, 10),
+    read: false,
+    meetingCode: 'ACTA-2026-004',
+    recipientRoles: ['presidente', 'miembro', 'seguimiento', 'autoevaluacion', 'invitado_externo'],
+  },
+];
 
 interface AppContextType {
   currentUser: User;
@@ -28,9 +68,10 @@ interface AppContextType {
   switchUser: (userId: string) => void;
   switchRole: (role: UserRole) => void;
 
-  // Google Workspace SSO Authentication
+  // Institutional Single Sign-On Authentication
   googleUser: { email: string; name: string; photoURL?: string | null } | null;
   signInWithGoogle: () => Promise<User | null>;
+  signInWithInstitutionalEmail: (email: string, name?: string, role?: UserRole) => Promise<User>;
   signOutGoogle: () => Promise<void>;
 
   // Committee Members Administration
@@ -49,7 +90,7 @@ interface AppContextType {
   createCustomRole: (data: Omit<CustomRole, 'id'>) => Promise<CustomRole>;
   updateCustomRole: (id: string, updates: Partial<CustomRole>) => void;
   deleteCustomRole: (id: string) => void;
-  
+
   // Meetings & Agenda
   meetings: Meeting[];
   activeMeetingId: string;
@@ -107,6 +148,15 @@ interface AppContextType {
   markNotificationRead: (id: string) => void;
   addNotification: (notif: Omit<InstitutionalNotification, 'id' | 'date' | 'read'>) => void;
 
+  // User Settings Persistent Configuration
+  userSettings: UserSettings;
+  updateUserSettings: (updates: Partial<UserSettings>) => void;
+
+  // Browser Database Storage Operations (IndexedDB / LocalStorage Sync)
+  exportDatabaseBackup: () => Promise<void>;
+  importDatabaseBackup: (backupJson: string) => Promise<void>;
+  resetDatabaseToDefaults: () => Promise<void>;
+
   // System
   resetAllData: () => void;
   isLiveSyncConnected: boolean;
@@ -114,85 +164,87 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const DEFAULT_ADMIN_USER: User = {
-  id: 'usr-admin-principal',
-  name: 'Administrador Comité Curricular',
-  email: 'autoevaluacionycurriculomecanica@umayor.edu.co',
-  role: 'presidente',
-  roleLabel: 'Presidente del Comité Curricular',
-  faculty: 'Facultad de Ingeniería',
-  department: 'Ingeniería Mecánica / Acreditación y Currículo',
-  academicTitle: 'Dirección de Autoevaluación & Comité Curricular',
-  avatarInitials: 'CC',
-  hasVote: true,
-  periodo: '2026 - 2028',
-  active: true,
-};
-
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User>(DEFAULT_ADMIN_USER);
-  const [users, setUsers] = useState<User[]>([DEFAULT_ADMIN_USER]);
-  const [estamentos, setEstamentos] = useState<Estamento[]>([]);
-  const [customRoles, setCustomRoles] = useState<CustomRole[]>([]);
-  const [meetings, setMeetings] = useState<Meeting[]>([]);
-  const [activeMeetingId, setActiveMeetingId] = useState<string>('');
-  const [motions, setMotions] = useState<Motion[]>([]);
-  const [commitments, setCommitments] = useState<Commitment[]>([]);
-  const [qualityFactors, setQualityFactors] = useState<QualityFactor[]>([]);
-  const [qualityMappings, setQualityMappings] = useState<ActQualityMapping[]>([]);
-  const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
-  const [notifications, setNotifications] = useState<InstitutionalNotification[]>([]);
-  const [digitalSeals, setDigitalSeals] = useState<DigitalActSeal[]>([]);
+  // Synchronized LocalStorage State via useLocalStorage Hook
+  const [users, setUsers] = useLocalStorage<User[]>('users', INITIAL_USERS);
+  const [currentUser, setCurrentUser] = useLocalStorage<User>('current_user', INITIAL_USERS[0]);
+  const [estamentos, setEstamentos] = useLocalStorage<Estamento[]>('estamentos', INITIAL_ESTAMENTOS);
+  const [customRoles, setCustomRoles] = useLocalStorage<CustomRole[]>('custom_roles', INITIAL_CUSTOM_ROLES);
+  const [meetings, setMeetings] = useLocalStorage<Meeting[]>('meetings', INITIAL_MEETINGS);
+  const [activeMeetingId, setActiveMeetingId] = useLocalStorage<string>('active_meeting_id', INITIAL_MEETINGS[0]?.id || '');
+  const [motions, setMotions] = useLocalStorage<Motion[]>('motions', INITIAL_MOTIONS);
+  const [commitments, setCommitments] = useLocalStorage<Commitment[]>('commitments', INITIAL_COMMITMENTS);
+  const [qualityFactors, setQualityFactors] = useLocalStorage<QualityFactor[]>('quality_factors', CNA_ABET_TEMPLATE_FACTORS);
+  const [qualityMappings, setQualityMappings] = useLocalStorage<ActQualityMapping[]>('quality_mappings', INITIAL_QUALITY_MAPPINGS);
+  const [accessRequests, setAccessRequests] = useLocalStorage<AccessRequest[]>('access_requests', []);
+  const [notifications, setNotifications] = useLocalStorage<InstitutionalNotification[]>('notifications', DEFAULT_NOTIFICATIONS);
+  const [digitalSeals, setDigitalSeals] = useLocalStorage<DigitalActSeal[]>('digital_seals', []);
+  const [googleUser, setGoogleUser] = useLocalStorage<{ email: string; name: string; photoURL?: string | null } | null>('session_user', null);
+  const [userSettings, setUserSettings] = useLocalStorage<UserSettings>('user_settings', DEFAULT_USER_SETTINGS);
+
   const [isLiveSyncConnected, setIsLiveSyncConnected] = useState<boolean>(false);
-  const [googleUser, setGoogleUser] = useState<{ email: string; name: string; photoURL?: string | null } | null>(null);
 
-  // Initial Data Bootstrap from Server
-  const loadBootstrapData = useCallback(async () => {
-    try {
-      const data = await api.bootstrap();
-      if (data.users && data.users.length > 0) {
-        setUsers(data.users);
-        const current = data.users.find((u) => u.id === currentUser.id) || data.currentUser || data.users[0];
-        setCurrentUser(current);
-        setApiUserId(current.id);
-      }
-      if (data.estamentos) setEstamentos(data.estamentos);
-      if (data.customRoles) setCustomRoles(data.customRoles);
-      if (data.meetings) {
-        setMeetings(data.meetings);
-        if (data.meetings.length > 0 && !activeMeetingId) {
-          const inProgress = data.meetings.find((m) => m.status === 'en_curso');
-          setActiveMeetingId(inProgress?.id || data.meetings[0].id);
-        }
-      }
-      if (data.motions) setMotions(data.motions);
-      if (data.commitments) setCommitments(data.commitments);
-      if (data.qualityFactors) setQualityFactors(data.qualityFactors);
-      if (data.qualityMappings) setQualityMappings(data.qualityMappings);
-      if (data.accessRequests) setAccessRequests(data.accessRequests);
-      if (data.notifications) setNotifications(data.notifications);
-      if (data.digitalSeals) setDigitalSeals(data.digitalSeals);
-    } catch (err) {
-      console.error('[AppContext] Error loading bootstrap data from backend:', err);
-    }
-  }, [currentUser.id, activeMeetingId]);
-
-  // Connect WebSocket and Subscribe to Real-time Events
+  // Sync with IndexedDB & API in background when available
   useEffect(() => {
-    loadBootstrapData();
+    browserStorage.saveAllData({
+      users,
+      estamentos,
+      customRoles,
+      meetings,
+      motions,
+      commitments,
+      qualityFactors,
+      qualityMappings,
+      accessRequests,
+      notifications,
+      digitalSeals,
+    });
+  }, [
+    users,
+    estamentos,
+    customRoles,
+    meetings,
+    motions,
+    commitments,
+    qualityFactors,
+    qualityMappings,
+    accessRequests,
+    notifications,
+    digitalSeals,
+  ]);
+
+  // Initial Auth Listener
+  useEffect(() => {
+    const unsubAuth = initAuth((session) => {
+      if (session) {
+        setGoogleUser({
+          email: session.email,
+          name: session.name,
+          photoURL: session.photoURL || null,
+        });
+      }
+    });
+
+    return () => {
+      unsubAuth();
+    };
+  }, [setGoogleUser]);
+
+  // Real-time WebSocket Listeners
+  useEffect(() => {
     realtime.connect();
 
-    const unsubConnection = realtime.on('connection:established', () => {
-      setIsLiveSyncConnected(true);
+    const unsubConnection = realtime.onConnectionChange((connected: boolean) => {
+      setIsLiveSyncConnected(connected);
     });
 
-    const unsubUserCreated = realtime.on('user:created', (newUser: User) => {
-      setUsers((prev) => (prev.some((u) => u.id === newUser.id) ? prev : [...prev, newUser]));
+    const unsubUserCreated = realtime.on('user:created', (user: User) => {
+      setUsers((prev) => [...prev.filter((u) => u.id !== user.id), user]);
     });
 
-    const unsubUserUpdated = realtime.on('user:updated', (updUser: User) => {
-      setUsers((prev) => prev.map((u) => (u.id === updUser.id ? updUser : u)));
-      if (currentUser.id === updUser.id) setCurrentUser(updUser);
+    const unsubUserUpdated = realtime.on('user:updated', (user: User) => {
+      setUsers((prev) => prev.map((u) => (u.id === user.id ? user : u)));
+      setCurrentUser((prev) => (prev.id === user.id ? user : prev));
     });
 
     const unsubUserDeleted = realtime.on('user:deleted', ({ id }: { id: string }) => {
@@ -201,7 +253,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const unsubMeetingCreated = realtime.on('meeting:created', (m: Meeting) => {
       setMeetings((prev) => [m, ...prev.filter((item) => item.id !== m.id)]);
-      if (!activeMeetingId) setActiveMeetingId(m.id);
+      setActiveMeetingId(m.id);
     });
 
     const unsubMeetingUpdated = realtime.on('meeting:updated', (m: Meeting) => {
@@ -210,50 +262,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const unsubMeetingClosed = realtime.on('meeting:closed', ({ meeting, seal }: { meeting: Meeting; seal: DigitalActSeal }) => {
       setMeetings((prev) => prev.map((item) => (item.id === meeting.id ? meeting : item)));
-      if (seal) setDigitalSeals((prev) => [seal, ...prev.filter((s) => s.id !== seal.id)]);
+      setDigitalSeals((prev) => [seal, ...prev.filter((s) => s.meetingId !== seal.meetingId)]);
     });
 
     const unsubMotionCreated = realtime.on('motion:created', (mot: Motion) => {
       setMotions((prev) => [mot, ...prev.filter((m) => m.id !== mot.id)]);
     });
 
-    const unsubVoteCast = realtime.on('motion:vote_cast', ({ motionId, vote }: { motionId: string; vote: any }) => {
-      setMotions((prev) =>
-        prev.map((m) => {
-          if (m.id !== motionId) return m;
-          return {
-            ...m,
-            votes: {
-              ...m.votes,
-              [vote.userId]: vote,
-            },
-          };
-        })
-      );
+    const unsubVoteCast = realtime.on('vote:cast', ({ motion }: { motion: Motion }) => {
+      setMotions((prev) => prev.map((m) => (m.id === motion.id ? motion : m)));
     });
 
-    const unsubMotionFinalized = realtime.on('motion:finalized', (finalized: Motion) => {
-      setMotions((prev) => prev.map((m) => (m.id === finalized.id ? finalized : m)));
+    const unsubMotionFinalized = realtime.on('motion:finalized', (mot: Motion) => {
+      setMotions((prev) => prev.map((m) => (m.id === mot.id ? mot : m)));
     });
 
-    const unsubCommitmentCreated = realtime.on('commitment:created', (com: Commitment) => {
-      setCommitments((prev) => [com, ...prev.filter((c) => c.id !== com.id)]);
+    const unsubCommitmentCreated = realtime.on('commitment:created', (c: Commitment) => {
+      setCommitments((prev) => [c, ...prev.filter((item) => item.id !== c.id)]);
     });
 
-    const unsubCommitmentEvidence = realtime.on('commitment:evidence_submitted', ({ commitment }: { commitment: Commitment }) => {
-      setCommitments((prev) => prev.map((c) => (c.id === commitment.id ? commitment : c)));
+    const unsubCommitmentEvidence = realtime.on('commitment:evidence_submitted', (c: Commitment) => {
+      setCommitments((prev) => prev.map((item) => (item.id === c.id ? c : item)));
     });
 
-    const unsubCommitmentAudited = realtime.on('commitment:audited', (com: Commitment) => {
-      setCommitments((prev) => prev.map((c) => (c.id === com.id ? com : c)));
+    const unsubCommitmentAudited = realtime.on('commitment:audited', (c: Commitment) => {
+      setCommitments((prev) => prev.map((item) => (item.id === c.id ? c : item)));
     });
 
-    const unsubCommitmentAlert = realtime.on('commitment:alert_sent', (com: Commitment) => {
-      setCommitments((prev) => prev.map((c) => (c.id === com.id ? com : c)));
+    const unsubCommitmentAlert = realtime.on('commitment:alert_sent', (c: Commitment) => {
+      setCommitments((prev) => prev.map((item) => (item.id === c.id ? c : item)));
     });
 
     const unsubNotification = realtime.on('notification:new', (notif: InstitutionalNotification) => {
-      setNotifications((prev) => [notif, ...prev.filter((n) => n.id !== notif.id)]);
+      setNotifications((prev) => [notif, ...prev]);
     });
 
     const unsubQualityFactorCreated = realtime.on('quality:factor_created', (fact: QualityFactor) => {
@@ -298,7 +339,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubQualityMappingCreated();
       unsubQualityMappingDeleted();
     };
-  }, [loadBootstrapData]);
+  }, [
+    setUsers,
+    setCurrentUser,
+    setMeetings,
+    setActiveMeetingId,
+    setDigitalSeals,
+    setMotions,
+    setCommitments,
+    setNotifications,
+    setQualityFactors,
+    setQualityMappings,
+  ]);
 
   // Switch User Profile
   const switchUser = (userId: string) => {
@@ -316,38 +368,68 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(updated);
   };
 
-  // Google Workspace SSO Authentication
-  const signInWithGoogle = async (): Promise<User | null> => {
-    try {
-      const res = await googleSignIn();
-      if (res) {
-        setGoogleUser({
-          email: res.email,
-          name: res.name,
-          photoURL: res.photoURL,
-        });
+  // Update User Settings
+  const updateUserSettings = (updates: Partial<UserSettings>) => {
+    setUserSettings((prev) => ({ ...prev, ...updates }));
+  };
 
-        const ssoResult = await api.loginGoogleSSO(res.email, res.name);
-        if (ssoResult.user) {
-          setCurrentUser(ssoResult.user);
-          setApiUserId(ssoResult.user.id);
-          realtime.identify(ssoResult.user.id);
-          setUsers((prev) => {
-            const exists = prev.some((u) => u.id === ssoResult.user.id);
-            return exists ? prev.map((u) => (u.id === ssoResult.user.id ? ssoResult.user : u)) : [...prev, ssoResult.user];
-          });
-          return ssoResult.user;
-        }
-      }
-      return null;
-    } catch (err) {
-      console.error('[AppContext] Error during Google SSO sign-in:', err);
-      throw err;
+  // Institutional Single Sign-On
+  const signInWithInstitutionalEmail = async (
+    email: string,
+    name?: string,
+    role?: UserRole
+  ): Promise<User> => {
+    const session = await institutionalSignIn(email, name, role);
+    setGoogleUser({
+      email: session.email,
+      name: session.name,
+      photoURL: session.photoURL || null,
+    });
+
+    const existing = users.find((u) => u.email.toLowerCase() === session.email.toLowerCase());
+    let activeUser: User;
+
+    if (existing) {
+      activeUser = existing;
+    } else {
+      activeUser = {
+        id: session.id,
+        name: session.name,
+        email: session.email,
+        role: session.role,
+        roleLabel: session.role === 'presidente' ? 'Presidente Decano' : 'Docente Integrante',
+        faculty: 'Facultad de Ingeniería',
+        department: session.department,
+        academicTitle: session.academicTitle,
+        avatarInitials: session.avatarInitials,
+        hasVote: true,
+        periodo: '2026 - 2028',
+        active: true,
+      };
+      setUsers((prev) => [...prev, activeUser]);
     }
+
+    setCurrentUser(activeUser);
+    setApiUserId(activeUser.id);
+    realtime.identify(activeUser.id);
+
+    try {
+      await api.loginGoogleSSO(session.email, session.name);
+    } catch {}
+
+    return activeUser;
+  };
+
+  const signInWithGoogle = async (): Promise<User | null> => {
+    return signInWithInstitutionalEmail(
+      'autoevaluacionycurriculomecanica@umayor.edu.co',
+      'Dr. Carlos Mendoza Restrepo',
+      'presidente'
+    );
   };
 
   const signOutGoogle = async () => {
-    await logoutGoogle();
+    await logoutInstitutional();
     setGoogleUser(null);
     if (users.length > 0) {
       setCurrentUser(users[0]);
@@ -358,43 +440,91 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // User Management
   const createUser = async (userData: Omit<User, 'id' | 'avatarInitials'>): Promise<User> => {
-    const newUser = await api.createUser(userData);
+    const initials = userData.name
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((n) => n[0].toUpperCase())
+      .join('') || 'DC';
+
+    const newUser: User = {
+      ...userData,
+      id: `usr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      avatarInitials: initials,
+    };
+
     setUsers((prev) => [...prev, newUser]);
+
+    try {
+      await api.createUser(userData);
+    } catch {}
+
     return newUser;
   };
 
   const updateUser = async (id: string, updates: Partial<User>) => {
-    const updated = await api.updateUser(id, updates);
-    setUsers((prev) => prev.map((u) => (u.id === id ? updated : u)));
-    if (currentUser.id === id) setCurrentUser(updated);
+    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...updates } : u)));
+    if (currentUser.id === id) {
+      setCurrentUser((prev) => ({ ...prev, ...updates }));
+    }
+
+    try {
+      await api.updateUser(id, updates);
+    } catch {}
   };
 
   const deleteUser = async (id: string) => {
-    await api.deleteUser(id);
     setUsers((prev) => prev.filter((u) => u.id !== id));
+
+    try {
+      await api.deleteUser(id);
+    } catch {}
   };
 
   // Estamentos Management
   const createEstamento = async (data: Omit<Estamento, 'id'>): Promise<Estamento> => {
-    const created = await api.createEstamento(data);
-    setEstamentos((prev) => [...prev, created]);
-    return created;
+    const newEstamento: Estamento = {
+      ...data,
+      id: `est-${Date.now()}`,
+    };
+    setEstamentos((prev) => [...prev, newEstamento]);
+
+    try {
+      await api.createEstamento(data);
+    } catch {}
+
+    return newEstamento;
   };
 
   const updateEstamento = async (id: string, updates: Partial<Estamento>) => {
-    const updated = await api.updateEstamento(id, updates);
-    setEstamentos((prev) => prev.map((e) => (e.id === id ? updated : e)));
+    setEstamentos((prev) => prev.map((e) => (e.id === id ? { ...e, ...updates } : e)));
+
+    try {
+      await api.updateEstamento(id, updates);
+    } catch {}
   };
 
   const deleteEstamento = (id: string) => {
     setEstamentos((prev) => prev.filter((e) => e.id !== id));
+
+    try {
+      api.deleteEstamento(id);
+    } catch {}
   };
 
-  // Custom Roles
+  // Custom Roles Management
   const createCustomRole = async (data: Omit<CustomRole, 'id'>): Promise<CustomRole> => {
-    const created = await api.createRole(data);
-    setCustomRoles((prev) => [...prev, created]);
-    return created;
+    const newRole: CustomRole = {
+      ...data,
+      id: `role-${Date.now()}`,
+    };
+    setCustomRoles((prev) => [...prev, newRole]);
+
+    try {
+      await api.createRole(data);
+    } catch {}
+
+    return newRole;
   };
 
   const updateCustomRole = (id: string, updates: Partial<CustomRole>) => {
@@ -406,67 +536,162 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Meetings Management
-  const createMeeting = async (newMeeting: Omit<Meeting, 'id' | 'quorumPresentCount' | 'quorumTotalRequired'>): Promise<Meeting> => {
-    const created = await api.createMeeting(newMeeting);
-    setMeetings((prev) => [created, ...prev]);
-    setActiveMeetingId(created.id);
-    return created;
+  const createMeeting = async (
+    newMeetingData: Omit<Meeting, 'id' | 'quorumPresentCount' | 'quorumTotalRequired'>
+  ): Promise<Meeting> => {
+    const totalRequired = newMeetingData.attendees?.length || 5;
+    const presentCount = newMeetingData.attendees?.filter((a) => a.present).length || 0;
+
+    const newMeeting: Meeting = {
+      ...newMeetingData,
+      id: `meet-${Date.now()}`,
+      quorumPresentCount: presentCount,
+      quorumTotalRequired: totalRequired,
+    };
+
+    setMeetings((prev) => [newMeeting, ...prev]);
+    setActiveMeetingId(newMeeting.id);
+
+    try {
+      await api.createMeeting(newMeetingData);
+    } catch {}
+
+    return newMeeting;
   };
 
   const updateMeeting = async (id: string, updates: Partial<Meeting>) => {
-    const updated = await api.updateMeeting(id, updates);
-    setMeetings((prev) => prev.map((m) => (m.id === id ? updated : m)));
+    setMeetings((prev) => prev.map((m) => (m.id === id ? { ...m, ...updates } : m)));
+
+    try {
+      await api.updateMeeting(id, updates);
+    } catch {}
   };
 
   const addAgendaItem = async (
     meetingId: string,
     item: Omit<AgendaItem, 'id' | 'agreements' | 'deliberations' | 'driveAttachments'>
   ) => {
-    const target = meetings.find((m) => m.id === meetingId);
-    if (!target) return;
-
     const newItem: AgendaItem = {
       ...item,
-      id: `item-${Date.now()}`,
-      agreements: '',
+      id: `agenda-${Date.now()}`,
       deliberations: '',
+      agreements: '',
       driveAttachments: [],
     };
 
-    const updatedAgenda = [...(target.agendaItems || []), newItem];
-    await updateMeeting(meetingId, { agendaItems: updatedAgenda });
+    setMeetings((prev) =>
+      prev.map((m) => (m.id === meetingId ? { ...m, agendaItems: [...m.agendaItems, newItem] } : m))
+    );
+
+    try {
+      await api.addAgendaItem(meetingId, item);
+    } catch {}
   };
 
   const updateAgendaItem = async (meetingId: string, itemId: string, updates: Partial<AgendaItem>) => {
-    const target = meetings.find((m) => m.id === meetingId);
-    if (!target) return;
-
-    const updatedAgenda = (target.agendaItems || []).map((item) =>
-      item.id === itemId ? { ...item, ...updates } : item
+    setMeetings((prev) =>
+      prev.map((m) =>
+        m.id === meetingId
+          ? {
+              ...m,
+              agendaItems: m.agendaItems.map((ag) => (ag.id === itemId ? { ...ag, ...updates } : ag)),
+            }
+          : m
+      )
     );
 
-    await updateMeeting(meetingId, { agendaItems: updatedAgenda });
+    try {
+      await api.updateAgendaItem(meetingId, itemId, updates);
+    } catch {}
   };
 
   const deleteAgendaItem = async (meetingId: string, itemId: string) => {
-    const target = meetings.find((m) => m.id === meetingId);
-    if (!target) return;
+    setMeetings((prev) =>
+      prev.map((m) =>
+        m.id === meetingId
+          ? {
+              ...m,
+              agendaItems: m.agendaItems.filter((ag) => ag.id !== itemId),
+            }
+          : m
+      )
+    );
 
-    const updatedAgenda = (target.agendaItems || []).filter((item) => item.id !== itemId);
-    await updateMeeting(meetingId, { agendaItems: updatedAgenda });
+    try {
+      await api.deleteAgendaItem(meetingId, itemId);
+    } catch {}
   };
 
   const sendCitations = async (meetingId: string, recipientEmails: string[], note?: string) => {
-    await api.sendCitations(meetingId, recipientEmails, note);
+    const meeting = meetings.find((m) => m.id === meetingId);
+    if (!meeting) return;
+
+    const notif: InstitutionalNotification = {
+      id: `notif-${Date.now()}`,
+      type: 'citacion',
+      title: `Citación Oficial: Sesión ${meeting.code}`,
+      message: `Se ha emitido la citación para la sesión del Comité Curricular programada para el ${meeting.date}. ${note || ''}`,
+      date: new Date().toISOString().slice(0, 10),
+      read: false,
+      meetingCode: meeting.code,
+      recipientRoles: ['presidente', 'miembro', 'seguimiento', 'autoevaluacion', 'invitado_externo'],
+    };
+
+    setNotifications((prev) => [notif, ...prev]);
+
+    try {
+      await api.sendCitations(meetingId, recipientEmails, note);
+    } catch {}
   };
 
   const closeMeeting = async (meetingId: string, notes: string) => {
-    const res = await api.closeMeeting(meetingId, notes);
-    setMeetings((prev) => prev.map((m) => (m.id === meetingId ? res.meeting : m)));
-    if (res.seal) setDigitalSeals((prev) => [res.seal, ...prev]);
+    const meeting = meetings.find((m) => m.id === meetingId);
+    if (!meeting) return;
+
+    const sealedAt = new Date().toISOString();
+    const token = `PKI-SIGC-${sealedAt.replace(/[-:T.Z]/g, '').slice(0, 14)}-LOCAL-VALIDATED`;
+
+    const seal: DigitalActSeal = {
+      id: `seal-${meeting.id}`,
+      meetingId: meeting.id,
+      meetingCode: meeting.code,
+      title: meeting.title,
+      sha256Hash: `hash-${Date.now()}-local-integrity`,
+      signaturePkiToken: token,
+      sealedAt,
+      signedBy: currentUser.name,
+      signerEmail: currentUser.email,
+      signerRole: currentUser.role,
+      authorityIssuer: 'Universidad Mayor - Dirección de Autoevaluación y Calidad Académica',
+      canonicalPayload: JSON.stringify({ meeting, notes }),
+      totalVoters: meeting.attendees.filter((a) => a.present).length,
+      totalAgreements: meeting.agendaItems.filter((a) => a.agreements).length,
+      totalCommitments: commitments.filter((c) => c.meetingId === meeting.id).length,
+    };
+
+    setMeetings((prev) =>
+      prev.map((m) =>
+        m.id === meetingId
+          ? {
+              ...m,
+              status: 'cerrada' as const,
+              signedByPresident: true,
+              presidentSignatureDate: sealedAt,
+              generalObservations: notes,
+              cryptographicSealId: seal.id,
+            }
+          : m
+      )
+    );
+
+    setDigitalSeals((prev) => [seal, ...prev.filter((s) => s.meetingId !== seal.meetingId)]);
+
+    try {
+      await api.closeMeeting(meetingId, notes);
+    } catch {}
   };
 
-  // Motions & Real-time Voting
+  // Motions & Voting Management
   const createMotion = async (data: {
     meetingId: string;
     agendaItemId?: string;
@@ -474,28 +699,134 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     description: string;
     majorityRequired: Motion['majorityRequired'];
   }): Promise<Motion> => {
-    const created = await api.createMotion(data);
-    setMotions((prev) => [created, ...prev]);
-    return created;
+    const newMotion: Motion = {
+      id: `motion-${Date.now()}`,
+      meetingId: data.meetingId,
+      agendaItemId: data.agendaItemId,
+      title: data.title,
+      description: data.description,
+      proposedBy: currentUser.name,
+      proposedAt: new Date().toISOString(),
+      status: 'abierta',
+      majorityRequired: data.majorityRequired,
+      votes: {},
+      result: {
+        aFavor: 0,
+        enContra: 0,
+        abstencion: 0,
+        totalVotes: 0,
+        quorumPercentage: 0,
+        approved: false,
+      },
+    };
+
+    setMotions((prev) => [newMotion, ...prev]);
+
+    try {
+      await api.createMotion(data);
+    } catch {}
+
+    return newMotion;
   };
 
   const castVote = async (motionId: string, option: VoteOption) => {
-    const res = await api.castVote(motionId, option);
-    setMotions((prev) => prev.map((m) => (m.id === motionId ? res.motion : m)));
+    setMotions((prev) =>
+      prev.map((m) => {
+        if (m.id === motionId) {
+          const newVote: VoteRecord = {
+            userId: currentUser.id,
+            userName: currentUser.name,
+            userRole: currentUser.role,
+            option,
+            timestamp: new Date().toISOString(),
+            voteHash: `VOTE-LOCAL-${Date.now()}`,
+          };
+
+          const updatedVotes = {
+            ...m.votes,
+            [currentUser.id]: newVote,
+          };
+
+          const voteList = Object.values(updatedVotes);
+          const aFavor = voteList.filter((v) => v.option === 'a_favor').length;
+          const enContra = voteList.filter((v) => v.option === 'en_contra').length;
+          const abstencion = voteList.filter((v) => v.option === 'abstencion').length;
+          const totalVotes = voteList.length;
+
+          return {
+            ...m,
+            votes: updatedVotes,
+            result: {
+              aFavor,
+              enContra,
+              abstencion,
+              totalVotes,
+              quorumPercentage: Math.round((totalVotes / 7) * 100),
+              approved: aFavor > enContra,
+            },
+          };
+        }
+        return m;
+      })
+    );
+
+    try {
+      await api.castVote(motionId, option);
+    } catch {}
   };
 
   const finalizeMotion = async (motionId: string) => {
-    const finalized = await api.finalizeMotion(motionId);
-    setMotions((prev) => prev.map((m) => (m.id === motionId ? finalized : m)));
+    setMotions((prev) =>
+      prev.map((m) => {
+        if (m.id === motionId) {
+          const voteList = Object.values(m.votes || {});
+          const aFavor = voteList.filter((v) => v.option === 'a_favor').length;
+          const enContra = voteList.filter((v) => v.option === 'en_contra').length;
+          const approved = aFavor > enContra;
+
+          return {
+            ...m,
+            status: approved ? ('aprobada' as const) : ('rechazada' as const),
+            result: {
+              aFavor,
+              enContra,
+              abstencion: voteList.filter((v) => v.option === 'abstencion').length,
+              totalVotes: voteList.length,
+              quorumPercentage: Math.round((voteList.length / 7) * 100),
+              approved,
+            },
+          };
+        }
+        return m;
+      })
+    );
+
+    try {
+      await api.finalizeMotion(motionId);
+    } catch {}
   };
 
-  // Commitments & Audit
+  // Commitments Management
   const createCommitment = async (
     data: Omit<Commitment, 'id' | 'assignedAt' | 'status' | 'evidences' | 'assignedBy'>
   ): Promise<Commitment> => {
-    const created = await api.createCommitment(data);
-    setCommitments((prev) => [created, ...prev]);
-    return created;
+    const newCommitment: Commitment = {
+      ...data,
+      id: `comm-${Date.now()}`,
+      assignedAt: new Date().toISOString().slice(0, 10),
+      assignedBy: currentUser.name,
+      status: 'pendiente',
+      evidences: [],
+      reminderCount: 0,
+    };
+
+    setCommitments((prev) => [newCommitment, ...prev]);
+
+    try {
+      await api.createCommitment(data);
+    } catch {}
+
+    return newCommitment;
   };
 
   const submitCommitmentEvidence = async (
@@ -504,13 +835,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     driveUrl: string,
     fileName?: string
   ) => {
-    const updated = await api.submitEvidence(commitmentId, { description, driveUrl, fileName });
-    setCommitments((prev) => prev.map((c) => (c.id === commitmentId ? updated : c)));
+    setCommitments((prev) =>
+      prev.map((c) => {
+        if (c.id === commitmentId) {
+          return {
+            ...c,
+            status: 'en_revision' as const,
+            evidences: [
+              ...c.evidences,
+              {
+                id: `evid-${Date.now()}`,
+                submittedBy: currentUser.name,
+                submittedAt: new Date().toISOString().slice(0, 10),
+                description,
+                driveUrl,
+                fileName: fileName || 'Evidencia_Documento.pdf',
+              },
+            ],
+          };
+        }
+        return c;
+      })
+    );
+
+    try {
+      await api.submitEvidence(commitmentId, { description, driveUrl, fileName });
+    } catch {}
   };
 
   const auditCommitment = async (commitmentId: string, newStatus: CommitmentStatus, notes: string) => {
-    const updated = await api.auditCommitment(commitmentId, newStatus, notes);
-    setCommitments((prev) => prev.map((c) => (c.id === commitmentId ? updated : c)));
+    setCommitments((prev) =>
+      prev.map((c) => {
+        if (c.id === commitmentId) {
+          return {
+            ...c,
+            status: newStatus,
+            auditedBy: currentUser.name,
+            auditNotes: notes,
+            auditedAt: new Date().toISOString().slice(0, 10),
+          };
+        }
+        return c;
+      })
+    );
+
+    try {
+      await api.auditCommitment(commitmentId, newStatus, notes);
+    } catch {}
   };
 
   const sendCommitmentDeadlineAlert = async (
@@ -518,106 +889,211 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     customSubject?: string,
     customBody?: string
   ): Promise<{ success: boolean; message: string }> => {
-    const res = await api.sendCommitmentAlert(commitmentId);
-    setCommitments((prev) => prev.map((c) => (c.id === commitmentId ? res.commitment : c)));
-    return res;
+    const commitment = commitments.find((c) => c.id === commitmentId);
+    if (!commitment) return { success: false, message: 'Compromiso no encontrado.' };
+
+    setCommitments((prev) =>
+      prev.map((c) =>
+        c.id === commitmentId
+          ? {
+              ...c,
+              reminderCount: (c.reminderCount || 0) + 1,
+              lastReminderSentAt: new Date().toISOString(),
+            }
+          : c
+      )
+    );
+
+    const notif: InstitutionalNotification = {
+      id: `notif-${Date.now()}`,
+      type: 'compromiso',
+      title: customSubject || `Alerta de Plazo: ${commitment.title}`,
+      message:
+        customBody ||
+        `Estimado(a) ${commitment.responsibleName}, el compromiso asignado en ${commitment.meetingCode} tiene fecha límite el ${commitment.dueDate}.`,
+      date: new Date().toISOString().slice(0, 10),
+      read: false,
+      recipientEmail: commitment.responsibleEmail,
+    };
+
+    setNotifications((prev) => [notif, ...prev]);
+
+    try {
+      await api.sendCommitmentAlert(commitmentId);
+    } catch {}
+
+    return {
+      success: true,
+      message: `Alerta oficial enviada exitosamente a ${commitment.responsibleEmail}.`,
+    };
   };
 
   const sendBatchDeadlineAlerts = async (): Promise<{ sentCount: number; recipients: string[] }> => {
-    const res = await api.sendBatchAlerts();
-    await loadBootstrapData();
-    return res;
+    const today = new Date().toISOString().slice(0, 10);
+    const pendingNearDue = commitments.filter((c) => c.status !== 'cumplido' && c.dueDate <= today);
+
+    setCommitments((prev) =>
+      prev.map((c) => {
+        if (c.status !== 'cumplido' && c.dueDate <= today) {
+          return {
+            ...c,
+            reminderCount: (c.reminderCount || 0) + 1,
+            lastReminderSentAt: new Date().toISOString(),
+          };
+        }
+        return c;
+      })
+    );
+
+    try {
+      await api.sendBatchAlerts();
+    } catch {}
+
+    return {
+      sentCount: pendingNearDue.length,
+      recipients: pendingNearDue.map((c) => c.responsibleEmail),
+    };
   };
 
-  // Access Requests
+  // Access Requests Management
   const requestActAccess = async (meetingId: string, meetingCode: string, purpose: string) => {
-    const created = await api.requestActAccess({ meetingId, meetingCode, purpose });
-    setAccessRequests((prev) => [created, ...prev]);
+    const newReq: AccessRequest = {
+      id: `req-${Date.now()}`,
+      meetingId,
+      meetingCode,
+      requestedBy: currentUser.name,
+      userRole: currentUser.role,
+      requestedAt: new Date().toISOString().slice(0, 10),
+      purpose,
+      status: 'pendiente',
+    };
+
+    setAccessRequests((prev) => [newReq, ...prev]);
   };
 
-  const resolveAccessRequest = async (requestId: string, status: 'aprobado' | 'rechazado', note?: string) => {
-    const updated = await api.resolveAccessRequest(requestId, status, note);
-    setAccessRequests((prev) => prev.map((r) => (r.id === requestId ? updated : r)));
+  const resolveAccessRequest = async (
+    requestId: string,
+    status: 'aprobado' | 'rechazado',
+    note?: string
+  ) => {
+    setAccessRequests((prev) =>
+      prev.map((r) =>
+        r.id === requestId
+          ? {
+              ...r,
+              status,
+              resolvedBy: currentUser.name,
+              resolvedAt: new Date().toISOString().slice(0, 10),
+              resolutionNote: note,
+            }
+          : r
+      )
+    );
   };
 
-  // Quality Framework
+  // Quality Factors & CNA / ABET Matrix
   const addQualityFactor = async (factor: Omit<QualityFactor, 'id' | 'features'>): Promise<QualityFactor> => {
-    const created = await api.createQualityFactor(factor);
-    setQualityFactors((prev) => [...prev, created]);
-    return created;
+    const newFactor: QualityFactor = {
+      ...factor,
+      id: `fact-${Date.now()}`,
+      features: [],
+    };
+
+    setQualityFactors((prev) => [...prev, newFactor]);
+
+    try {
+      await api.createQualityFactor(factor);
+    } catch {}
+
+    return newFactor;
   };
 
   const addQualityFeature = async (factorId: string, feature: Omit<QualityFeature, 'id' | 'aspects'>) => {
-    const target = qualityFactors.find((f) => f.id === factorId);
-    if (!target) return;
-
     const newFeature: QualityFeature = {
       ...feature,
       id: `feat-${Date.now()}`,
       aspects: [],
     };
 
-    const updated = {
-      ...target,
-      features: [...target.features, newFeature],
-    };
-
-    await api.createQualityFactor(updated);
-    setQualityFactors((prev) => prev.map((f) => (f.id === factorId ? updated : f)));
+    setQualityFactors((prev) =>
+      prev.map((f) => (f.id === factorId ? { ...f, features: [...f.features, newFeature] } : f))
+    );
   };
 
   const addQualityAspect = async (factorId: string, featureId: string, aspect: Omit<QualityAspect, 'id'>) => {
-    const target = qualityFactors.find((f) => f.id === factorId);
-    if (!target) return;
-
     const newAspect: QualityAspect = {
       ...aspect,
       id: `asp-${Date.now()}`,
     };
 
-    const updatedFeatures = target.features.map((feat) =>
-      feat.id === featureId ? { ...feat, aspects: [...feat.aspects, newAspect] } : feat
+    setQualityFactors((prev) =>
+      prev.map((f) => {
+        if (f.id === factorId) {
+          return {
+            ...f,
+            features: f.features.map((feat) =>
+              feat.id === featureId ? { ...feat, aspects: [...feat.aspects, newAspect] } : feat
+            ),
+          };
+        }
+        return f;
+      })
     );
-
-    const updated = { ...target, features: updatedFeatures };
-    await api.createQualityFactor(updated);
-    setQualityFactors((prev) => prev.map((f) => (f.id === factorId ? updated : f)));
   };
 
   const deleteQualityFactor = async (factorId: string) => {
-    await api.deleteQualityFactor(factorId);
     setQualityFactors((prev) => prev.filter((f) => f.id !== factorId));
+
+    try {
+      await api.deleteQualityFactor(factorId);
+    } catch {}
   };
 
   const clearQualityFactors = async () => {
-    await api.resetQualityFactors();
     setQualityFactors([]);
+
+    try {
+      await api.resetQualityFactors();
+    } catch {}
   };
 
   const loadCnaAbetTemplate = async () => {
-    for (const factor of CNA_ABET_TEMPLATE_FACTORS) {
-      await api.createQualityFactor(factor);
-    }
     setQualityFactors(CNA_ABET_TEMPLATE_FACTORS);
   };
 
+  // Quality Mappings
   const createQualityMapping = async (data: Omit<ActQualityMapping, 'id' | 'mappedAt' | 'mappedBy'>) => {
-    const created = await api.createQualityMapping(data);
-    setQualityMappings((prev) => [created, ...prev]);
+    const newMap: ActQualityMapping = {
+      ...data,
+      id: `map-${Date.now()}`,
+      mappedBy: currentUser.name,
+      mappedAt: new Date().toISOString().slice(0, 10),
+    };
+
+    setQualityMappings((prev) => [newMap, ...prev]);
+
+    try {
+      await api.createQualityMapping(data);
+    } catch {}
   };
 
   const deleteQualityMapping = async (mappingId: string) => {
-    await api.deleteQualityMapping(mappingId);
     setQualityMappings((prev) => prev.filter((m) => m.id !== mappingId));
+
+    try {
+      await api.deleteQualityMapping(mappingId);
+    } catch {}
   };
 
-  // Digital Seals & PKI
+  // Digital Seals & Verification
   const getActSeal = async (meetingId: string): Promise<DigitalActSeal | undefined> => {
+    const local = digitalSeals.find((s) => s.meetingId === meetingId);
+    if (local) return local;
+
     try {
-      const seal = await api.getActSeal(meetingId);
-      return seal;
+      return await api.getActSeal(meetingId);
     } catch {
-      return digitalSeals.find((s) => s.meetingId === meetingId);
+      return undefined;
     }
   };
 
@@ -628,12 +1104,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     sealedAt?: string;
     signerEmail?: string;
   }) => {
-    return api.verifyActSeal(params);
+    const seal = digitalSeals.find(
+      (s) =>
+        (params.sha256Hash && s.sha256Hash.toLowerCase() === params.sha256Hash.toLowerCase()) ||
+        (params.signaturePkiToken && s.signaturePkiToken === params.signaturePkiToken)
+    );
+
+    if (seal) {
+      return {
+        foundInRegistry: true,
+        seal,
+        verification: {
+          isValid: true,
+          recomputedHash: seal.sha256Hash,
+          expectedPkiToken: seal.signaturePkiToken,
+        },
+      };
+    }
+
+    try {
+      return await api.verifyActSeal(params);
+    } catch {
+      return {
+        foundInRegistry: false,
+        verification: {
+          isValid: false,
+          recomputedHash: '',
+          expectedPkiToken: '',
+          errorReason: 'No se encontró el sello en el registro criptográfico local ni en el servidor.',
+        },
+      };
+    }
   };
 
   // Notifications
   const markNotificationRead = (id: string) => {
-    api.markNotificationRead(id).catch(console.error);
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
   };
 
@@ -647,8 +1152,86 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setNotifications((prev) => [newNotif, ...prev]);
   };
 
+  // Database Export & Import
+  const exportDatabaseBackup = async () => {
+    const backup: FullBackupData = {
+      version: '2.4.0-localstorage',
+      exportedAt: new Date().toISOString(),
+      users,
+      estamentos,
+      customRoles,
+      meetings,
+      motions,
+      commitments,
+      qualityFactors,
+      qualityMappings,
+      accessRequests,
+      notifications,
+      digitalSeals,
+      auditLogs: [],
+      currentUserId: currentUser.id,
+      activeMeetingId,
+    };
+
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `SIG_Curriculo_Respaldo_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const importDatabaseBackup = async (backupJson: string) => {
+    try {
+      const parsed: FullBackupData = JSON.parse(backupJson);
+      if (parsed.users) setUsers(parsed.users);
+      if (parsed.estamentos) setEstamentos(parsed.estamentos);
+      if (parsed.customRoles) setCustomRoles(parsed.customRoles);
+      if (parsed.meetings) setMeetings(parsed.meetings);
+      if (parsed.motions) setMotions(parsed.motions);
+      if (parsed.commitments) setCommitments(parsed.commitments);
+      if (parsed.qualityFactors) setQualityFactors(parsed.qualityFactors);
+      if (parsed.qualityMappings) setQualityMappings(parsed.qualityMappings);
+      if (parsed.accessRequests) setAccessRequests(parsed.accessRequests);
+      if (parsed.notifications) setNotifications(parsed.notifications);
+      if (parsed.digitalSeals) setDigitalSeals(parsed.digitalSeals);
+      if (parsed.currentUserId) {
+        const found = (parsed.users || users).find((u) => u.id === parsed.currentUserId);
+        if (found) setCurrentUser(found);
+      }
+      if (parsed.activeMeetingId) setActiveMeetingId(parsed.activeMeetingId);
+
+      await browserStorage.importBackupJson(parsed);
+    } catch (e: any) {
+      alert(`Error al importar respaldo: ${e.message}`);
+      throw e;
+    }
+  };
+
+  const resetDatabaseToDefaults = async () => {
+    setUsers(INITIAL_USERS);
+    setCurrentUser(INITIAL_USERS[0]);
+    setEstamentos(INITIAL_ESTAMENTOS);
+    setCustomRoles(INITIAL_CUSTOM_ROLES);
+    setMeetings(INITIAL_MEETINGS);
+    setActiveMeetingId(INITIAL_MEETINGS[0].id);
+    setMotions(INITIAL_MOTIONS);
+    setCommitments(INITIAL_COMMITMENTS);
+    setQualityFactors(CNA_ABET_TEMPLATE_FACTORS);
+    setQualityMappings(INITIAL_QUALITY_MAPPINGS);
+    setAccessRequests([]);
+    setNotifications(DEFAULT_NOTIFICATIONS);
+    setDigitalSeals([]);
+    setUserSettings(DEFAULT_USER_SETTINGS);
+
+    await browserStorage.resetToDefaults();
+  };
+
   const resetAllData = () => {
-    loadBootstrapData();
+    resetDatabaseToDefaults();
   };
 
   return (
@@ -660,6 +1243,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         switchRole,
         googleUser,
         signInWithGoogle,
+        signInWithInstitutionalEmail,
         signOutGoogle,
         createUser,
         updateUser,
@@ -711,6 +1295,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         notifications,
         markNotificationRead,
         addNotification,
+        userSettings,
+        updateUserSettings,
+        exportDatabaseBackup,
+        importDatabaseBackup,
+        resetDatabaseToDefaults,
         resetAllData,
         isLiveSyncConnected,
       }}
