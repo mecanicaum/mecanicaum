@@ -95,6 +95,11 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
   const unreadCount = userNotifications.filter((n) => !n.read).length;
 
   const roleLabelsMap: Record<UserRole, { title: string; badge: string; border: string }> = {
+    super_admin: {
+      title: 'Super Administrador',
+      badge: 'bg-indigo-50 text-indigo-900 border-indigo-300 font-bold',
+      border: 'border-indigo-600',
+    },
     presidente: {
       title: 'Presidente del Comité',
       badge: 'bg-emerald-50 text-emerald-800 border-emerald-200',

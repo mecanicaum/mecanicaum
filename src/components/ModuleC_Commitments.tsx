@@ -69,8 +69,8 @@ export const ModuleC_Commitments: React.FC = () => {
   const [batchSending, setBatchSending] = useState(false);
   const [batchResultBanner, setBatchResultBanner] = useState<string | null>(null);
 
-  const isTracker = currentUser.role === 'seguimiento';
-  const isPresident = currentUser.role === 'presidente';
+  const isTracker = currentUser.role === 'super_admin' || currentUser.role === 'seguimiento';
+  const isPresident = currentUser.role === 'super_admin' || currentUser.role === 'presidente';
   const isExternal = currentUser.role === 'invitado_externo';
 
   // Deadline calculation helpers

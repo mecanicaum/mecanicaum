@@ -106,6 +106,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   };
 
   const roleBadges: Record<UserRole, { label: string; color: string }> = {
+    super_admin: { label: 'Super Administrador', color: 'bg-indigo-100 text-indigo-900 border-indigo-300 font-bold' },
     presidente: { label: 'Presidente Decano', color: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
     miembro: { label: 'Miembro con Voto', color: 'bg-blue-100 text-blue-800 border-blue-300' },
     seguimiento: { label: 'Sec. Seguimiento', color: 'bg-amber-100 text-amber-800 border-amber-300' },
@@ -250,13 +251,14 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   />
                 </div>
                 {/* Autocomplete domain shortcuts */}
-                <div className="flex gap-1.5 mt-2">
+                <div className="flex flex-wrap gap-1.5 mt-2">
                   <button
                     type="button"
                     onClick={() => setEmail('autoevaluacionycurriculomecanica@umayor.edu.co')}
-                    className="text-[10px] bg-blue-50 hover:bg-blue-100 text-blue-800 font-semibold px-2 py-0.5 rounded border border-blue-200 transition-colors"
+                    className="text-[10px] bg-indigo-50 hover:bg-indigo-100 text-indigo-900 font-bold px-2.5 py-1 rounded-md border border-indigo-200 transition-colors flex items-center gap-1.5"
                   >
-                    + autoevaluacionycurriculomecanica@umayor.edu.co
+                    <ShieldCheck className="h-3 w-3 text-indigo-700" />
+                    <span>Super Administrador: autoevaluacionycurriculomecanica@umayor.edu.co</span>
                   </button>
                 </div>
               </div>

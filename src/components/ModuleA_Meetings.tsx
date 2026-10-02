@@ -63,7 +63,7 @@ export const ModuleA_Meetings: React.FC<ModuleAProps> = ({ onGoToLiveMeeting }) 
   const [newItemMinutes, setNewItemMinutes] = useState(25);
 
   const selectedMeeting = meetings.find((m) => m.id === selectedMeetingId) || meetings[0];
-  const isPresident = currentUser.role === 'presidente';
+  const isPresident = currentUser.role === 'super_admin' || currentUser.role === 'presidente';
 
   const handleCreateMeeting = async (e: React.FormEvent) => {
     e.preventDefault();

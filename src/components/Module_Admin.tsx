@@ -474,18 +474,22 @@ export const Module_Admin: React.FC = () => {
       {/* TAB 2: GESTIÓN DE ROLES DEL COMITÉ */}
       {activeTab === 'roles' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-indigo-50/80 via-white to-purple-50/60 p-4 rounded-xl border border-indigo-200 shadow-xs">
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                Roles Estatutarios Parametrizados ({customRoles.length})
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold uppercase tracking-wider mb-1">
+                <Shield className="h-3 w-3" />
+                Facultad Exclusiva del Super Administrador
+              </div>
+              <h3 className="text-sm font-bold text-slate-900">
+                Roles Estatutarios del Comité Curricular ({customRoles.length})
               </h3>
-              <p className="text-[11px] text-slate-500">
-                Cada rol define las prerrogativas de deliberación, voto nominal y firmas según estatuto general.
+              <p className="text-xs text-slate-600 mt-0.5">
+                Los roles dentro del comité son creados y configurados por el Super Administrador (<span className="font-mono text-indigo-700">autoevaluacionycurriculomecanica@umayor.edu.co</span>), definiendo voz, voto nominal, firma de actas y auditoría.
               </p>
             </div>
             <button
               onClick={openNewRoleModal}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 transition-colors shadow-xs"
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-indigo-700 transition-colors shadow-xs shrink-0"
             >
               <Plus className="h-3.5 w-3.5" />
               Crear Nuevo Rol

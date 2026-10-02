@@ -39,14 +39,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
       label: 'A. Programación & Orden del Día',
       sublabel: 'Convocatorias, puntos y citaciones',
       icon: CalendarDays,
-      roles: ['presidente', 'miembro', 'seguimiento', 'autoevaluacion'],
+      roles: ['super_admin', 'presidente', 'miembro', 'seguimiento', 'autoevaluacion'],
     },
     {
       id: 'modulo_b',
       label: 'B. Desarrollo & Votación en Vivo',
       sublabel: 'Minuta dinámica, acuerdos y mociones',
       icon: FileEdit,
-      roles: ['presidente', 'miembro'],
+      roles: ['super_admin', 'presidente', 'miembro'],
       highlight: true,
     },
     {
@@ -54,7 +54,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
       label: 'C. Seguimiento de Compromisos',
       sublabel: 'Evidencias, auditoría y actas pasadas',
       icon: CheckSquare,
-      roles: ['presidente', 'miembro', 'seguimiento', 'invitado_externo'],
+      roles: ['super_admin', 'presidente', 'miembro', 'seguimiento', 'invitado_externo'],
       badgeCount: userPendingCommitments > 0 ? userPendingCommitments : undefined,
     },
     {
@@ -62,21 +62,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
       label: 'D. Gestor de Autoevaluación',
       sublabel: 'Nomenclaturas CNA/ABET y mapeo',
       icon: Award,
-      roles: ['presidente', 'autoevaluacion', 'seguimiento'],
+      roles: ['super_admin', 'presidente', 'autoevaluacion', 'seguimiento'],
     },
     {
       id: 'modulo_e',
       label: 'E. Dashboard & Indicadores',
       sublabel: 'KPIs, cumplimiento y semáforo',
       icon: BarChart3,
-      roles: ['presidente', 'miembro', 'seguimiento', 'autoevaluacion'],
+      roles: ['super_admin', 'presidente', 'miembro', 'seguimiento', 'autoevaluacion'],
     },
     {
       id: 'modulo_admin',
       label: 'F. Administración del Comité',
       sublabel: 'Miembros, roles y estamentos',
       icon: UserCog,
-      roles: ['presidente', 'autoevaluacion', 'seguimiento', 'miembro'],
+      roles: ['super_admin', 'presidente', 'autoevaluacion', 'seguimiento', 'miembro'],
     },
   ];
 
@@ -84,13 +84,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
     <aside className="w-64 lg:w-72 shrink-0 border-r border-slate-200 bg-white flex flex-col justify-between h-[calc(100vh-4rem)] sticky top-16 select-none">
       <div className="p-4 space-y-6 overflow-y-auto">
         {/* Active Role Card */}
-        <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 shadow-xs">
+        <div className={`rounded-xl border p-3.5 shadow-xs ${
+          currentUser.role === 'super_admin'
+            ? 'border-indigo-300 bg-gradient-to-br from-indigo-50/90 to-purple-50/60'
+            : 'border-slate-200 bg-slate-50/70'
+        }`}>
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
               Sesión Institucional
             </span>
-            <span className="inline-flex items-center gap-1 rounded bg-slate-200/80 px-1.5 py-0.5 text-[9px] font-bold text-slate-700 uppercase">
-              {currentUser.role.replace('_', ' ')}
+            <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase ${
+              currentUser.role === 'super_admin'
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'bg-slate-200/80 text-slate-700'
+            }`}>
+              {currentUser.role === 'super_admin' ? 'SUPER ADMIN' : currentUser.role.replace('_', ' ')}
             </span>
           </div>
           <div className="mt-2">
@@ -105,8 +113,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
           <div className="mt-2.5 pt-2 border-t border-slate-200/70 flex items-center justify-between text-[11px]">
             <span className="text-slate-500">Permisos RBAC:</span>
             <span className="font-semibold text-slate-700 flex items-center gap-1">
-              <ShieldCheck className="h-3 w-3 text-emerald-600" />
-              {currentUser.role === 'presidente' && 'Control Total'}
+              <ShieldCheck className="h-3 w-3 text-indigo-600" />
+              {currentUser.role === 'super_admin' && 'Super Admin (Control Total)'}
+              {currentUser.role === 'presidente' && 'Presidencia & Firma'}
               {currentUser.role === 'miembro' && 'Voz, Voto & Tareas'}
               {currentUser.role === 'seguimiento' && 'Auditoría & Control'}
               {currentUser.role === 'autoevaluacion' && 'Acreditación & Mapeo'}

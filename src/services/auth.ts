@@ -76,32 +76,43 @@ export const institutionalSignIn = async (
   role?: UserRole
 ): Promise<InstitutionalSessionUser> => {
   const normalizedEmail = email.toLowerCase().trim();
-  const displayName = name || (normalizedEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()));
+  const isSuperAdminEmail = normalizedEmail === 'autoevaluacionycurriculomecanica@umayor.edu.co';
   
-  const initials = displayName
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((n) => n[0].toUpperCase())
-    .join('') || 'DC';
+  const displayName = isSuperAdminEmail
+    ? (name || 'Super Administrador del Comité Curricular')
+    : (name || (normalizedEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())));
+  
+  const initials = isSuperAdminEmail
+    ? 'SA'
+    : displayName
+        .split(' ')
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((n) => n[0].toUpperCase())
+        .join('') || 'DC';
 
-  const assignedRole: UserRole =
-    role ||
-    (normalizedEmail.includes('autoevaluacion') || normalizedEmail.includes('decano') || normalizedEmail.includes('curriculo')
-      ? 'presidente'
-      : normalizedEmail.includes('seguimiento')
-      ? 'seguimiento'
-      : normalizedEmail.includes('estudiante') || normalizedEmail.includes('alumno')
-      ? 'miembro'
-      : 'miembro');
+  const assignedRole: UserRole = isSuperAdminEmail
+    ? 'super_admin'
+    : role ||
+      (normalizedEmail.includes('decano') || normalizedEmail.includes('presidente')
+        ? 'presidente'
+        : normalizedEmail.includes('seguimiento')
+        ? 'seguimiento'
+        : normalizedEmail.includes('estudiante') || normalizedEmail.includes('alumno')
+        ? 'miembro'
+        : 'miembro');
 
   const session: InstitutionalSessionUser = {
-    id: `usr-inst-${Date.now()}`,
+    id: isSuperAdminEmail ? 'usr-admin-principal' : `usr-inst-${Date.now()}`,
     name: displayName,
     email: normalizedEmail,
     role: assignedRole,
     department: 'Facultad de Ingeniería · Depto. Ingeniería Mecánica',
-    academicTitle: assignedRole === 'presidente' ? 'Decano / Presidente de Comité' : 'Docente / Integrante del Comité',
+    academicTitle: assignedRole === 'super_admin'
+      ? 'Super Administrador / Presidencia Comité Curricular'
+      : assignedRole === 'presidente'
+      ? 'Decano / Presidente de Comité'
+      : 'Docente / Integrante del Comité',
     avatarInitials: initials,
     token: `inst-token-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`,
     authenticatedAt: new Date().toISOString(),
@@ -126,9 +137,9 @@ export const googleSignIn = async (
   providedName?: string
 ): Promise<GoogleAuthResult | null> => {
   const defaultEmail = providedEmail || 'autoevaluacionycurriculomecanica@umayor.edu.co';
-  const defaultName = providedName || 'Dr. Carlos Mendoza Restrepo';
+  const defaultName = providedName || 'Super Administrador del Comité Curricular';
   
-  const session = await institutionalSignIn(defaultEmail, defaultName, 'presidente');
+  const session = await institutionalSignIn(defaultEmail, defaultName, 'super_admin');
 
   return {
     firebaseUser: {

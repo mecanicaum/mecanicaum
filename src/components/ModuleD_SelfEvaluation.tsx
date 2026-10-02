@@ -87,7 +87,7 @@ export const ModuleD_SelfEvaluation: React.FC = () => {
   const [matrixFactorFilter, setMatrixFactorFilter] = useState('all');
   const [matrixSearchQuery, setMatrixSearchQuery] = useState('');
 
-  const isEvaluator = currentUser.role === 'autoevaluacion' || currentUser.role === 'presidente';
+  const isEvaluator = currentUser.role === 'super_admin' || currentUser.role === 'autoevaluacion' || currentUser.role === 'presidente';
 
   // Derived features and aspects for select dropdowns
   const activeFactorObj = qualityFactors.find((f) => f.id === selectedFactorId) || qualityFactors[0];

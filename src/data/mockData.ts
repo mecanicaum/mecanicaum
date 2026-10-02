@@ -63,8 +63,19 @@ export const INITIAL_ESTAMENTOS: Estamento[] = [
   },
 ];
 
-// ROLES INSTITUCIONALES CONFIGURABLES
+// ROLES INSTITUCIONALES CONFIGURABLES (Creados y administrados por el Super Administrador)
 export const INITIAL_CUSTOM_ROLES: CustomRole[] = [
+  {
+    id: 'rol-superadmin',
+    code: 'SUPER_ADMIN',
+    name: 'Super Administrador del Sistema',
+    description: 'Gestor supremo del sistema: crea y parametriza los roles dentro del comité, estamentos, integrantes, firmas y flujos de acreditación.',
+    baseCapability: 'super_admin',
+    canVote: true,
+    canSign: true,
+    canAudit: true,
+    canTagQuality: true,
+  },
   {
     id: 'rol-pres',
     code: 'PRES',
@@ -123,20 +134,21 @@ export const INITIAL_CUSTOM_ROLES: CustomRole[] = [
 ];
 
 // BASE DE DATOS DE USUARIOS BLANQUEADA:
-// Únicamente la cuenta institucional administradora activa del usuario sin miembros ficticios de prueba.
+// Super Administrador oficial asignado a autoevaluacionycurriculomecanica@umayor.edu.co
 export const INITIAL_USERS: User[] = [
   {
     id: 'usr-admin-principal',
-    name: 'Administrador Comité Curricular',
+    name: 'Super Administrador del Comité Curricular',
     email: 'autoevaluacionycurriculomecanica@umayor.edu.co',
-    role: 'presidente',
-    customRoleId: 'rol-pres',
-    roleLabel: 'Administrador Institucional / Presidencia',
+    role: 'super_admin',
+    customRoleId: 'rol-superadmin',
+    roleLabel: 'Super Administrador del Sistema',
     estamentoId: 'est-dir',
     estamentoName: 'Estamento Directivo / Decanatura',
     faculty: 'Facultad de Ingeniería',
     department: 'Departamento de Ingeniería Mecánica',
-    avatarInitials: 'AD',
+    academicTitle: 'Super Administrador / Presidencia Comité Curricular',
+    avatarInitials: 'SA',
     hasVote: true,
     periodo: '2026 - 2028',
     active: true,

@@ -58,7 +58,7 @@ const DEFAULT_NOTIFICATIONS: InstitutionalNotification[] = [
     date: new Date().toISOString().slice(0, 10),
     read: false,
     meetingCode: 'ACTA-2026-004',
-    recipientRoles: ['presidente', 'miembro', 'seguimiento', 'autoevaluacion', 'invitado_externo'],
+    recipientRoles: ['super_admin', 'presidente', 'miembro', 'seguimiento', 'autoevaluacion', 'invitado_externo'],
   },
 ];
 
@@ -389,22 +389,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       photoURL: session.photoURL || null,
     });
 
+    const isSuperAdmin = session.email.toLowerCase() === 'autoevaluacionycurriculomecanica@umayor.edu.co';
     const existing = users.find((u) => u.email.toLowerCase() === session.email.toLowerCase());
     let activeUser: User;
 
     if (existing) {
-      activeUser = existing;
+      if (isSuperAdmin) {
+        activeUser = {
+          ...existing,
+          role: 'super_admin',
+          customRoleId: 'rol-superadmin',
+          roleLabel: 'Super Administrador del Sistema',
+          academicTitle: 'Super Administrador / Presidencia Comité Curricular',
+          avatarInitials: 'SA',
+          hasVote: true,
+        };
+        setUsers((prev) => prev.map((u) => (u.id === existing.id ? activeUser : u)));
+      } else {
+        activeUser = existing;
+      }
     } else {
       activeUser = {
-        id: session.id,
-        name: session.name,
+        id: isSuperAdmin ? 'usr-admin-principal' : session.id,
+        name: isSuperAdmin ? 'Super Administrador del Comité Curricular' : session.name,
         email: session.email,
-        role: session.role,
-        roleLabel: session.role === 'presidente' ? 'Presidente Decano' : 'Docente Integrante',
+        role: isSuperAdmin ? 'super_admin' : session.role,
+        customRoleId: isSuperAdmin ? 'rol-superadmin' : undefined,
+        roleLabel: isSuperAdmin ? 'Super Administrador del Sistema' : session.role === 'presidente' ? 'Presidente Decano' : 'Docente Integrante',
         faculty: 'Facultad de Ingeniería',
         department: session.department,
-        academicTitle: session.academicTitle,
-        avatarInitials: session.avatarInitials,
+        academicTitle: isSuperAdmin ? 'Super Administrador / Presidencia Comité Curricular' : session.academicTitle,
+        avatarInitials: isSuperAdmin ? 'SA' : session.avatarInitials,
         hasVote: true,
         periodo: '2026 - 2028',
         active: true,
@@ -430,8 +445,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const signInWithGoogle = async (): Promise<User | null> => {
     return signInWithInstitutionalEmail(
       'autoevaluacionycurriculomecanica@umayor.edu.co',
-      'Dr. Carlos Mendoza Restrepo',
-      'presidente'
+      'Super Administrador del Comité Curricular',
+      'super_admin'
     );
   };
 

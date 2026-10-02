@@ -70,8 +70,8 @@ export const ModuleB_MeetingLive: React.FC = () => {
   const [comDueDate, setComDueDate] = useState('2026-10-25');
   const [comPriority, setComPriority] = useState<'alta' | 'media' | 'baja'>('alta');
 
-  const isPresident = currentUser.role === 'presidente';
-  const isMemberOrPresident = currentUser.role === 'presidente' || currentUser.role === 'miembro';
+  const isPresident = currentUser.role === 'super_admin' || currentUser.role === 'presidente';
+  const isMemberOrPresident = currentUser.role === 'super_admin' || currentUser.role === 'presidente' || currentUser.role === 'miembro';
 
   // Motions for this meeting
   const meetingMotions = motions.filter((mot) => mot.meetingId === meeting?.id);
