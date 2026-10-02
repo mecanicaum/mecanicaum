@@ -52,7 +52,11 @@ textarea {
   font: inherit;
 }
 
-/* Reduce visual noise and improve readability */
+::selection {
+  background: rgba(59, 130, 246, 0.14);
+  color: var(--text-primary);
+}
+
 main,
 aside,
 header,
@@ -65,7 +69,6 @@ div[data-slot='card'],
   transition: box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
 }
 
-/* Soft focus states */
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
@@ -74,7 +77,6 @@ textarea:focus-visible {
   outline-offset: 2px;
 }
 
-/* Custom scrollbars for dense administrative tables and agendas */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -94,7 +96,6 @@ textarea:focus-visible {
   background-clip: padding-box;
 }
 
-/* Print styles remain intact */
 @media print {
   @page {
     margin: 15mm 15mm 15mm 15mm;
