@@ -7,9 +7,7 @@ import {
   Award, 
   BarChart3, 
   Lock, 
-  ExternalLink, 
   ShieldCheck, 
-  UserCheck,
   UserCog,
   LogOut
 } from 'lucide-react';
@@ -36,44 +34,44 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
   const navItems = [
     {
       id: 'modulo_a',
-      label: 'A. Programación & Orden del Día',
-      sublabel: 'Convocatorias, puntos y citaciones',
+      label: 'A. Programación y orden del día',
+      sublabel: 'Convocatorias y puntos de agenda',
       icon: CalendarDays,
       roles: ['super_admin', 'presidente', 'miembro', 'seguimiento', 'autoevaluacion'],
     },
     {
       id: 'modulo_b',
-      label: 'B. Desarrollo & Votación en Vivo',
-      sublabel: 'Minuta dinámica, acuerdos y mociones',
+      label: 'B. Desarrollo y votación en vivo',
+      sublabel: 'Minuta, acuerdos y mociones',
       icon: FileEdit,
       roles: ['super_admin', 'presidente', 'miembro'],
       highlight: true,
     },
     {
       id: 'modulo_c',
-      label: 'C. Seguimiento de Compromisos',
-      sublabel: 'Evidencias, auditoría y actas pasadas',
+      label: 'C. Seguimiento de compromisos',
+      sublabel: 'Evidencias y actas previas',
       icon: CheckSquare,
       roles: ['super_admin', 'presidente', 'miembro', 'seguimiento', 'invitado_externo'],
       badgeCount: userPendingCommitments > 0 ? userPendingCommitments : undefined,
     },
     {
       id: 'modulo_d',
-      label: 'D. Gestor de Autoevaluación',
-      sublabel: 'Nomenclaturas CNA/ABET y mapeo',
+      label: 'D. Gestor de autoevaluación',
+      sublabel: 'CNA/ABET y mapeo de evidencias',
       icon: Award,
       roles: ['super_admin', 'presidente', 'autoevaluacion', 'seguimiento'],
     },
     {
       id: 'modulo_e',
-      label: 'E. Dashboard & Indicadores',
-      sublabel: 'KPIs, cumplimiento y semáforo',
+      label: 'E. Dashboard e indicadores',
+      sublabel: 'KPIs, cumplimiento y alertas',
       icon: BarChart3,
       roles: ['super_admin', 'presidente', 'miembro', 'seguimiento', 'autoevaluacion'],
     },
     {
       id: 'modulo_admin',
-      label: 'F. Administración del Comité',
+      label: 'F. Administración del comité',
       sublabel: 'Miembros, roles y estamentos',
       icon: UserCog,
       roles: ['super_admin', 'presidente', 'autoevaluacion', 'seguimiento', 'miembro'],
@@ -91,7 +89,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
         }`}>
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-              Sesión Institucional
+              Perfil activo
             </span>
             <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase ${
               currentUser.role === 'super_admin'
@@ -111,15 +109,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
           </div>
 
           <div className="mt-2.5 pt-2 border-t border-slate-200/70 flex items-center justify-between text-[11px]">
-            <span className="text-slate-500">Permisos RBAC:</span>
+            <span className="text-slate-500">Permisos:</span>
             <span className="font-semibold text-slate-700 flex items-center gap-1">
               <ShieldCheck className="h-3 w-3 text-indigo-600" />
-              {currentUser.role === 'super_admin' && 'Super Admin (Control Total)'}
-              {currentUser.role === 'presidente' && 'Presidencia & Firma'}
-              {currentUser.role === 'miembro' && 'Voz, Voto & Tareas'}
-              {currentUser.role === 'seguimiento' && 'Auditoría & Control'}
-              {currentUser.role === 'autoevaluacion' && 'Acreditación & Mapeo'}
-              {currentUser.role === 'invitado_externo' && 'Solo Tareas Asignadas'}
+              {currentUser.role === 'super_admin' && 'Control total'}
+              {currentUser.role === 'presidente' && 'Presidencia'}
+              {currentUser.role === 'miembro' && 'Voz y voto'}
+              {currentUser.role === 'seguimiento' && 'Auditoría'}
+              {currentUser.role === 'autoevaluacion' && 'Acreditación'}
+              {currentUser.role === 'invitado_externo' && 'Solo tareas'}
             </span>
           </div>
         </div>
@@ -127,7 +125,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
         {/* Navigation Modules */}
         <div>
           <p className="px-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2">
-            Módulos del Sistema
+            Módulos del sistema
           </p>
           <nav className="space-y-1">
             {navItems.map((item) => {
@@ -191,10 +189,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
       {/* Footer System Info & Logout */}
       <div className="p-4 border-t border-slate-200 bg-slate-50/50 text-[11px] text-slate-500 space-y-2.5">
         <div className="flex items-center justify-between">
-          <span className="font-medium text-slate-700">Estado del Sistema</span>
+          <span className="font-medium text-slate-700">Estado</span>
           <span className="flex items-center gap-1.5 text-emerald-700 font-semibold">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-            En Línea (Local)
+            En línea
           </span>
         </div>
         <button
@@ -203,7 +201,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
           title="Cerrar sesión institucional y volver al portal de ingreso"
         >
           <LogOut className="h-4 w-4 text-rose-600" />
-          <span>Cerrar Sesión</span>
+          <span>Cerrar sesión</span>
         </button>
       </div>
     </aside>
