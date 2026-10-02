@@ -6,28 +6,95 @@
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
 }
 
+:root {
+  color-scheme: light;
+  --bg-page: #f4f7fb;
+  --bg-panel: rgba(255, 255, 255, 0.86);
+  --bg-subtle: #f8fafc;
+  --border-soft: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --shadow-soft: 0 10px 30px rgba(15, 23, 42, 0.06);
+  --shadow-card: 0 8px 20px rgba(15, 23, 42, 0.04);
+  --radius-card: 18px;
+  --radius-button: 12px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg-page);
+}
+
 body {
+  margin: 0;
   font-family: var(--font-sans);
-  color: #0f172a;
+  color: var(--text-primary);
+  background:
+    radial-gradient(circle at top, rgba(148, 163, 184, 0.12), transparent 24%),
+    var(--bg-page);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+/* Reduce visual noise and improve readability */
+main,
+aside,
+header,
+section,
+article,
+div[data-slot='card'],
+.card,
+.rounded-xl,
+.rounded-lg {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+
+/* Soft focus states */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.35);
+  outline-offset: 2px;
 }
 
 /* Custom scrollbars for dense administrative tables and agendas */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
+  background: rgba(148, 163, 184, 0.7);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: rgba(100, 116, 139, 0.9);
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
-/* Dedicated High-Fidelity Print & PDF Styles */
+/* Print styles remain intact */
 @media print {
   @page {
     margin: 15mm 15mm 15mm 15mm;
@@ -56,7 +123,6 @@ body {
     overflow: visible !important;
   }
 
-  /* Prevent awkward page cuts in table rows and motion blocks */
   table, tr, td, th {
     page-break-inside: avoid;
   }
