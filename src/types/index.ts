@@ -44,6 +44,7 @@ export interface User {
   hasVote?: boolean;
   periodo?: string; // e.g. "2026 - 2028"
   active?: boolean;
+  password?: string;
 }
 
 export type MeetingType = 'ordinaria' | 'extraordinaria';

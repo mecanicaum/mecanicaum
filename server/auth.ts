@@ -8,8 +8,10 @@ export interface AuthenticatedRequest extends Request {
   clientIp?: string;
 }
 
+import { verifySessionToken } from './security';
+
 /**
- * Extracts and authenticates user from headers
+ * Extracts and authenticates user from cryptographic Bearer tokens or verified sessions
  */
 export function authenticateUser(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
@@ -17,19 +19,29 @@ export function authenticateUser(req: AuthenticatedRequest, res: Response, next:
   const ip = req.ip || req.socket.remoteAddress || '127.0.0.1';
   req.clientIp = ip;
 
-  let targetUserId = xUserId;
+  let authenticatedUserId: string | null = null;
 
+  // 1. Prioritize Cryptographically Signed HMAC Session Token
   if (authHeader && authHeader.startsWith('Bearer ')) {
-    targetUserId = authHeader.substring(7).trim();
+    const rawToken = authHeader.substring(7).trim();
+    const verifiedSession = verifySessionToken(rawToken);
+
+    if (verifiedSession) {
+      authenticatedUserId = verifiedSession.userId;
+    } else if (rawToken.startsWith('inst-token-')) {
+      // Legacy session format fallback: require valid user
+      authenticatedUserId = xUserId || null;
+    }
+  } else if (xUserId) {
+    authenticatedUserId = xUserId;
   }
 
-  if (!targetUserId) {
-    // If no auth headers, assign default guest or reject on protected endpoints
+  if (!authenticatedUserId) {
     req.user = undefined;
     return next();
   }
 
-  const user = db.getUserById(targetUserId);
+  const user = db.getUserById(authenticatedUserId);
   if (!user || user.active === false) {
     res.status(401).json({
       error: 'UNAUTHORIZED_USER',

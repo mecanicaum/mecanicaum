@@ -15,6 +15,27 @@ import {
 } from '../types';
 
 let currentUserId = 'usr-admin-principal';
+let currentToken = '';
+
+export function setApiToken(token: string) {
+  currentToken = token;
+  try {
+    if (token) {
+      localStorage.setItem('sigc_auth_token', token);
+    } else {
+      localStorage.removeItem('sigc_auth_token');
+    }
+  } catch {}
+}
+
+export function getApiToken(): string {
+  if (!currentToken && typeof window !== 'undefined') {
+    try {
+      currentToken = localStorage.getItem('sigc_auth_token') || '';
+    } catch {}
+  }
+  return currentToken;
+}
 
 export function setApiUserId(id: string) {
   currentUserId = id;
@@ -28,6 +49,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers || {});
   headers.set('Content-Type', 'application/json');
   headers.set('x-user-id', currentUserId);
+  const token = getApiToken();
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
 
   const response = await fetch(`/api${path}`, {
     ...options,
@@ -176,6 +201,13 @@ export const api = {
     request<{ success: boolean; user: User; isNewUser: boolean; message: string }>('/auth/google-sso', {
       method: 'POST',
       body: JSON.stringify({ email, name }),
+    }),
+
+  // Institutional Credentials Login
+  loginWithCredentials: (email: string, password: string) =>
+    request<{ success: boolean; user: User; token: string; message: string }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
     }),
 
   // Users

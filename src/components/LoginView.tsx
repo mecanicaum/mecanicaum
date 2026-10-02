@@ -22,7 +22,7 @@ interface LoginViewProps {
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
-  const { users, signInWithInstitutionalEmail, switchUser } = useApp();
+  const { users, signInWithInstitutionalEmail, loginWithInstitutionalCredentials } = useApp();
 
   const [activeTab, setActiveTab] = useState<'institutional' | 'roster' | 'guest'>('institutional');
   const [email, setEmail] = useState('');
@@ -31,70 +31,79 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [rememberSession, setRememberSession] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
   const handleInstitutionalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    setInfoMsg(null);
 
     if (!email.trim()) {
       setErrorMsg('Por favor ingrese su correo electrónico institucional.');
       return;
     }
 
+    if (!password.trim()) {
+      setErrorMsg('Por favor ingrese su contraseña o PIN institucional de acceso.');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // Find if email matches an existing user
-      const existingUser = users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
-      
-      if (existingUser) {
-        switchUser(existingUser.id);
-        await signInWithInstitutionalEmail(existingUser.email, existingUser.name, existingUser.role);
-      } else {
-        await signInWithInstitutionalEmail(email.trim(), undefined, 'miembro');
-      }
-
+      await loginWithInstitutionalCredentials(email.trim(), password.trim());
       if (onLoginSuccess) onLoginSuccess();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Error al iniciar sesión institucional.');
+      setErrorMsg(err.message || 'Error al autenticar credenciales institucionales.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleQuickRosterLogin = async (userId: string) => {
+  const handleQuickRosterLogin = (userId: string) => {
     setErrorMsg(null);
-    setIsLoading(true);
-    try {
-      const targetUser = users.find((u) => u.id === userId);
-      if (targetUser) {
-        switchUser(targetUser.id);
-        await signInWithInstitutionalEmail(targetUser.email, targetUser.name, targetUser.role);
-        if (onLoginSuccess) onLoginSuccess();
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error al autenticar con el perfil seleccionado.');
-    } finally {
-      setIsLoading(false);
+    const targetUser = users.find((u) => u.id === userId);
+    if (targetUser) {
+      setEmail(targetUser.email);
+      setPassword('');
+      setActiveTab('institutional');
+      setInfoMsg(`Ha seleccionado a ${targetUser.name}. Ingrese su contraseña o PIN para acceder.`);
     }
   };
 
   const handleGuestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    setInfoMsg(null);
 
-    if (!guestCode.trim()) {
+    const cleanCode = guestCode.trim().toUpperCase();
+    if (!cleanCode) {
       setErrorMsg('Por favor ingrese el código o token de citación como invitado.');
+      return;
+    }
+
+    if (!cleanCode.startsWith('INV-')) {
+      setErrorMsg('Formato no reconocido. Los códigos oficiales inician con "INV-" (Ej: INV-2026-MEC-8492).');
       return;
     }
 
     setIsLoading(true);
     try {
-      // Find guest user or create guest session
-      const guestUser = users.find((u) => u.role === 'invitado_externo') || users[users.length - 1];
-      switchUser(guestUser.id);
+      const guestUser = users.find((u) => u.role === 'invitado_externo') || {
+        id: `usr-invitado-${Date.now()}`,
+        name: `Invitado Sector Productivo (${cleanCode})`,
+        email: `invitado.${cleanCode.toLowerCase().replace(/[^a-z0-9]/g, '')}@empresa-aliada.com`,
+        role: 'invitado_externo' as UserRole,
+        department: 'Consejo Asesor / Sector Productivo',
+        academicTitle: 'Representante Externo',
+        avatarInitials: 'IE',
+        hasVote: false,
+        periodo: '2026 - 2028',
+        active: true,
+      };
+
       await signInWithInstitutionalEmail(
-        guestUser.email || 'invitado.externo@empresa-aliada.com',
-        guestUser.name || 'Invitado Sector Productivo',
+        guestUser.email,
+        guestUser.name,
         'invitado_externo'
       );
       if (onLoginSuccess) onLoginSuccess();
@@ -230,6 +239,14 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             </div>
           )}
 
+          {/* Info Notice */}
+          {infoMsg && (
+            <div className="mb-4 p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-blue-600" />
+              <span>{infoMsg}</span>
+            </div>
+          )}
+
           {/* Tab 1: Institutional Email & PIN Login */}
           {activeTab === 'institutional' && (
             <form onSubmit={handleInstitutionalSubmit} className="space-y-4">
@@ -294,6 +311,16 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 <span className="text-[11px] text-slate-400">Autenticación local</span>
               </div>
 
+              <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 text-[11px] text-slate-600 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                  <ShieldCheck className="h-3.5 w-3.5 text-blue-600" />
+                  <span>Autenticación Institucional Segura:</span>
+                </div>
+                <p className="text-slate-500">
+                  Ingrese con sus credenciales oficiales de la Universidad Mayor. En caso de olvido o bloqueo temporal por intentos fallidos, comuníquese con la Presidencia del Comité Curricular o la Dirección de Autoevaluación y Calidad.
+                </p>
+              </div>
+
               <button
                 type="submit"
                 disabled={isLoading}
@@ -315,7 +342,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           {activeTab === 'roster' && (
             <div className="space-y-3">
               <p className="text-xs text-slate-500 font-medium">
-                Haga clic sobre cualquier integrante oficial del comité para acceder instantáneamente:
+                Seleccione un integrante del padrón oficial para completar su correo y validar su contraseña o PIN:
               </p>
               <div className="grid grid-cols-1 gap-2 max-h-72 overflow-y-auto pr-1">
                 {users.map((u) => {

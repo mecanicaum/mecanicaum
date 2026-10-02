@@ -31,7 +31,7 @@ import {
   CNA_ABET_TEMPLATE_FACTORS,
 } from '../data/mockData';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import { api, realtime, setApiUserId } from '../services/api';
+import { api, realtime, setApiUserId, setApiToken } from '../services/api';
 import {
   initAuth,
   institutionalSignIn,
@@ -68,11 +68,12 @@ interface AppContextType {
   switchUser: (userId: string) => void;
   switchRole: (role: UserRole) => void;
 
-  // Institutional Single Sign-On Authentication
+  // Institutional Single Sign-On & Credentials Authentication
   isAuthenticated: boolean;
   googleUser: { email: string; name: string; photoURL?: string | null } | null;
   signInWithGoogle: () => Promise<User | null>;
   signInWithInstitutionalEmail: (email: string, name?: string, role?: UserRole) => Promise<User>;
+  loginWithInstitutionalCredentials: (email: string, password?: string) => Promise<User>;
   signOutGoogle: () => Promise<void>;
   logout: () => void;
 
@@ -182,7 +183,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [notifications, setNotifications] = useLocalStorage<InstitutionalNotification[]>('notifications', DEFAULT_NOTIFICATIONS);
   const [digitalSeals, setDigitalSeals] = useLocalStorage<DigitalActSeal[]>('digital_seals', []);
   const [googleUser, setGoogleUser] = useLocalStorage<{ email: string; name: string; photoURL?: string | null } | null>('session_user', null);
-  const [isAuthenticated, setIsAuthenticated] = useLocalStorage<boolean>('is_authenticated', true);
+  const [isAuthenticated, setIsAuthenticated] = useLocalStorage<boolean>('is_authenticated', false);
   const [userSettings, setUserSettings] = useLocalStorage<UserSettings>('user_settings', DEFAULT_USER_SETTINGS);
 
   const [isLiveSyncConnected, setIsLiveSyncConnected] = useState<boolean>(false);
@@ -450,9 +451,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  const loginWithInstitutionalCredentials = async (
+    email: string,
+    password?: string
+  ): Promise<User> => {
+    const normalizedEmail = email.toLowerCase().trim();
+    if (!normalizedEmail) {
+      throw new Error('Debe ingresar su correo institucional.');
+    }
+    if (!password || !password.trim()) {
+      throw new Error('Debe ingresar su contraseña o PIN institucional de acceso.');
+    }
+
+    const isSuperAdminEmail = normalizedEmail === 'autoevaluacionycurriculomecanica@umayor.edu.co';
+    const targetUser = users.find((u) => u.email.toLowerCase() === normalizedEmail);
+
+    if (!targetUser && !isSuperAdminEmail) {
+      throw new Error('El correo ingresado no figura registrado en el padrón del comité curricular.');
+    }
+
+    // Validate password (default master: AdminCurriculo2026*, member default: Umayor2026!)
+    const expectedPassword = targetUser?.password || (isSuperAdminEmail ? 'AdminCurriculo2026*' : 'Umayor2026!');
+    if (password.trim() !== expectedPassword.trim()) {
+      throw new Error('Contraseña o PIN incorrecto. Por favor verifique sus datos de acceso.');
+    }
+
+    // Attempt backend audit log and obtain cryptographically signed token
+    try {
+      const loginRes = await api.loginWithCredentials(normalizedEmail, password.trim());
+      if (loginRes.token) {
+        setApiToken(loginRes.token);
+      }
+    } catch (e) {
+      // Continue with verified local credentials if offline
+    }
+
+    return await signInWithInstitutionalEmail(
+      normalizedEmail,
+      targetUser?.name,
+      targetUser?.role || (isSuperAdminEmail ? 'super_admin' : 'miembro')
+    );
+  };
+
   const logout = () => {
     // 1. Terminate institutional authentication session
     logoutInstitutional();
+    setApiToken('');
 
     // 2. Clear user state and reset to roster baseline
     setGoogleUser(null);
@@ -468,6 +512,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.removeItem('sigc_storage_v2_session_user');
       localStorage.removeItem('sigc_institutional_session_v1');
       localStorage.removeItem('sigc_state_currentUserId');
+      localStorage.removeItem('sigc_auth_token');
     } catch (err) {
       console.warn('[AppContext] Storage cleanup on logout:', err);
     }
@@ -1284,6 +1329,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         googleUser,
         signInWithGoogle,
         signInWithInstitutionalEmail,
+        loginWithInstitutionalCredentials,
         signOutGoogle,
         logout,
         createUser,

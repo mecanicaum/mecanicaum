@@ -44,6 +44,7 @@ const INITIAL_ADMIN_USER: User = {
   hasVote: true,
   periodo: '2026 - 2028',
   active: true,
+  password: 'AdminCurriculo2026*',
 };
 
 const DEFAULT_ESTAMENTOS: Estamento[] = [

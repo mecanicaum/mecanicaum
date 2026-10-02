@@ -303,54 +303,68 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
             <div className="absolute right-0 mt-2 w-80 rounded-xl border border-slate-200 bg-white p-2 shadow-xl ring-1 ring-slate-950/5 z-50">
               <div className="px-2 py-1.5 border-b border-slate-100 mb-1">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                  Simular Rol RBAC Institucional
+                  {currentUser.role === 'super_admin' ? 'Simular Perfil / Administrador' : 'Perfil Institucional'}
                 </p>
                 <p className="text-xs text-slate-500">
-                  Seleccione un perfil para validar los permisos y flujos del sistema:
+                  {currentUser.role === 'super_admin'
+                    ? 'Seleccione un perfil para validar los permisos y flujos del sistema:'
+                    : `${currentUser.name} (${currentUser.email})`}
                 </p>
               </div>
-              <div className="space-y-1">
-                {users.map((u) => {
-                  const isCurrent = u.id === currentUser.id;
-                  const config = roleLabelsMap[u.role] || roleLabelsMap.miembro;
-                  return (
-                    <button
-                      key={u.id}
-                      onClick={() => {
-                        switchUser(u.id);
-                        setShowRoleSelector(false);
-                      }}
-                      className={`flex w-full items-start gap-2.5 rounded-lg p-2 text-left text-xs transition-colors ${
-                        isCurrent ? 'bg-slate-100 font-semibold' : 'hover:bg-slate-50'
-                      }`}
-                    >
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-slate-900 text-xs font-bold text-white mt-0.5">
-                        {u.avatarInitials}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <span className="truncate text-slate-900 font-medium">
-                            {u.name}
-                          </span>
-                          {isCurrent && (
-                            <span className="text-[10px] text-emerald-700 font-medium">
-                              Activo
+
+              {currentUser.role === 'super_admin' ? (
+                <div className="space-y-1">
+                  {users.map((u) => {
+                    const isCurrent = u.id === currentUser.id;
+                    const config = roleLabelsMap[u.role] || roleLabelsMap.miembro;
+                    return (
+                      <button
+                        key={u.id}
+                        onClick={() => {
+                          switchUser(u.id);
+                          setShowRoleSelector(false);
+                        }}
+                        className={`flex w-full items-start gap-2.5 rounded-lg p-2 text-left text-xs transition-colors ${
+                          isCurrent ? 'bg-slate-100 font-semibold' : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-slate-900 text-xs font-bold text-white mt-0.5">
+                          {u.avatarInitials}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <span className="truncate text-slate-900 font-medium">
+                              {u.name}
                             </span>
-                          )}
+                            {isCurrent && (
+                              <span className="text-[10px] text-emerald-700 font-medium">
+                                Activo
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-500 truncate">
+                            {u.roleLabel || u.academicTitle}
+                          </p>
+                          <div className="mt-1 flex items-center gap-1.5 text-[10px] text-slate-400">
+                            <span>{config.title}</span>
+                            <span>·</span>
+                            <span className="font-mono text-[9px]">{u.email}</span>
+                          </div>
                         </div>
-                        <p className="text-[11px] text-slate-500 truncate">
-                          {u.roleLabel || u.academicTitle}
-                        </p>
-                        <div className="mt-1 flex items-center gap-1.5 text-[10px] text-slate-400">
-                          <span>{config.title}</span>
-                          <span>·</span>
-                          <span className="font-mono text-[9px]">{u.email}</span>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-3 bg-slate-50 rounded-lg text-xs space-y-1">
+                  <p className="font-bold text-slate-900">{currentUser.name}</p>
+                  <p className="text-slate-500 font-mono text-[11px]">{currentUser.email}</p>
+                  <p className="text-slate-600 text-[11px]">{currentUser.academicTitle || currentUser.roleLabel}</p>
+                  <span className={`inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-md border ${roleLabelsMap[currentUser.role]?.badge}`}>
+                    {roleLabelsMap[currentUser.role]?.title}
+                  </span>
+                </div>
+              )}
 
               <div className="pt-2 mt-1 border-t border-slate-100 flex items-center justify-between">
                 <button

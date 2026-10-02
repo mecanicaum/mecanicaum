@@ -12,6 +12,17 @@ const server = http.createServer(app);
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 const isProduction = process.env.NODE_ENV === 'production';
 
+// Disable fingerprinting header
+app.disable('x-powered-by');
+
+// Security Headers Middleware
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
 // Express body parsers
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -26,6 +37,17 @@ app.use((req, res, next) => {
 
 // Mount API routes
 app.use('/api', apiRouter);
+
+// Centralized safe error handler (prevents stack trace disclosure)
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('[SERVER_ERROR]', err);
+  if (!res.headersSent) {
+    res.status(err.status || 500).json({
+      error: 'INTERNAL_SERVER_ERROR',
+      message: 'Ocurrió un error en el servidor. La incidencia fue registrada para auditoría de seguridad.',
+    });
+  }
+});
 
 // Initialize Real-time WebSocket Hub attached to HTTP server
 wsHub.init(server);

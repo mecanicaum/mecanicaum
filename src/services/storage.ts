@@ -357,7 +357,10 @@ class BrowserStorageManager {
     return {
       version: '2.4.0-indexeddb',
       exportedAt: new Date().toISOString(),
-      users,
+      users: users.map((u) => {
+        const { password, ...safeUser } = u as any;
+        return safeUser as User;
+      }),
       estamentos,
       customRoles,
       meetings,

@@ -39,6 +39,8 @@ export interface User {
   hasVote?: boolean;
   periodo?: string;
   active?: boolean;
+  password?: string;
+  passwordSalt?: string;
 }
 
 export type MeetingType = 'ordinaria' | 'extraordinaria';

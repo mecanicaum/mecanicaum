@@ -1,0 +1,426 @@
+{
+  "users": [
+    {
+      "id": "usr-admin-principal",
+      "name": "Super Administrador del Comité Curricular",
+      "email": "autoevaluacionycurriculomecanica@umayor.edu.co",
+      "role": "super_admin",
+      "department": "Facultad de Ingeniería · Depto. Ingeniería Mecánica",
+      "academicTitle": "Super Administrador / Presidencia Comité Curricular",
+      "avatarInitials": "SA",
+      "hasVote": true,
+      "periodo": "2026 - 2028",
+      "active": true
+    }
+  ],
+  "estamentos": [
+    {
+      "id": "est-doc-1",
+      "name": "Estamento Profesoral / Docente",
+      "code": "DOC",
+      "description": "Profesores de planta y de cátedra del programa de Ingeniería Mecánica.",
+      "category": "docente",
+      "hasStatutoryVote": true,
+      "active": true
+    },
+    {
+      "id": "est-est-1",
+      "name": "Estamento Estudiantil",
+      "code": "EST",
+      "description": "Representantes electos por el estudiantado de pregrado.",
+      "category": "estudiantil",
+      "hasStatutoryVote": true,
+      "active": true
+    },
+    {
+      "id": "est-egr-1",
+      "name": "Estamento de Egresados",
+      "code": "EGR",
+      "description": "Representante de los graduados en el medio profesional e industrial.",
+      "category": "egresado",
+      "hasStatutoryVote": true,
+      "active": true
+    },
+    {
+      "id": "est-dir-1",
+      "name": "Directivo / Decanatura y Dirección",
+      "code": "DIR",
+      "description": "Decanatura de Facultad y Dirección de Programa Académico.",
+      "category": "directivo",
+      "hasStatutoryVote": true,
+      "active": true
+    },
+    {
+      "id": "est-ext-1",
+      "name": "Sector Productivo / Externo",
+      "code": "EXT",
+      "description": "Representantes de gremios, empresas aliadas y Consejo Asesor Industrial.",
+      "category": "externo",
+      "hasStatutoryVote": false,
+      "active": true
+    }
+  ],
+  "customRoles": [
+    {
+      "id": "role-pres-1",
+      "name": "Presidente / Director de Comité",
+      "code": "PRESIDENTE",
+      "description": "Dirige sesiones, convoca orden del día, formula mociones y refrenda actas con firma digital.",
+      "baseRole": "presidente",
+      "canVote": true,
+      "canSignActs": true,
+      "canAuditCommitments": true,
+      "canMapQuality": true,
+      "isAdmin": true,
+      "color": "slate"
+    },
+    {
+      "id": "role-miem-1",
+      "name": "Miembro Principal del Comité",
+      "code": "VOCAL_DOCENTE",
+      "description": "Participa con voz y voto estatutario en debates, aprobación de acuerdos y votaciones nominales.",
+      "baseRole": "miembro",
+      "canVote": true,
+      "canSignActs": false,
+      "canAuditCommitments": false,
+      "canMapQuality": false,
+      "isAdmin": false,
+      "color": "emerald"
+    },
+    {
+      "id": "role-seg-1",
+      "name": "Encargado de Seguimiento y Control",
+      "code": "AUDITOR_SEGUIMIENTO",
+      "description": "Monitorea el cumplimiento de compromisos, audita evidencias en Google Drive y remite alertas de vencimiento.",
+      "baseRole": "seguimiento",
+      "canVote": false,
+      "canSignActs": false,
+      "canAuditCommitments": true,
+      "canMapQuality": false,
+      "isAdmin": true,
+      "color": "blue"
+    },
+    {
+      "id": "role-auto-1",
+      "name": "Gestor de Autoevaluación & Calidad",
+      "code": "GESTOR_CALIDAD",
+      "description": "Indexa acuerdos de actas en factores, características y aspectos para procesos de acreditación CNA y ABET.",
+      "baseRole": "autoevaluacion",
+      "canVote": false,
+      "canSignActs": false,
+      "canAuditCommitments": false,
+      "canMapQuality": true,
+      "isAdmin": true,
+      "color": "purple"
+    },
+    {
+      "id": "role-inv-1",
+      "name": "Invitado Externo / Sector Productivo",
+      "code": "INVITADO_EXT",
+      "description": "Participa con voz consultiva en temas curriculares específicos y radica evidencias de compromisos externos.",
+      "baseRole": "invitado_externo",
+      "canVote": false,
+      "canSignActs": false,
+      "canAuditCommitments": false,
+      "canMapQuality": false,
+      "isAdmin": false,
+      "color": "amber"
+    }
+  ],
+  "meetings": [],
+  "motions": [],
+  "commitments": [],
+  "qualityFactors": [
+    {
+      "id": "fact-1790956927728",
+      "code": "FACTOR",
+      "name": "Seguridad",
+      "description": "",
+      "framework": "CNA",
+      "features": []
+    }
+  ],
+  "qualityMappings": [],
+  "accessRequests": [],
+  "notifications": [
+    {
+      "id": "notif-init-1",
+      "title": "Sistema SIG-Currículo Inicializado",
+      "message": "Base de datos del servidor y servicios de autenticación y PKI activos.",
+      "date": "2026-10-02",
+      "read": false,
+      "recipientRoles": [
+        "presidente",
+        "seguimiento",
+        "autoevaluacion"
+      ],
+      "type": "sistema"
+    }
+  ],
+  "digitalSeals": [],
+  "auditLogs": [
+    {
+      "userId": "usr-1790956934972-itvl",
+      "userName": "Docente Juan Perez",
+      "userRole": "miembro",
+      "action": "ACCESS_DENIED_RBAC_VIOLATION",
+      "resource": "/api/users",
+      "details": "Intento de acceso no autorizado con rol 'miembro'. Roles requeridos: presidente, seguimiento, autoevaluacion",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1790956934986-cg6q25",
+      "timestamp": "2026-10-02T16:02:14.986Z"
+    },
+    {
+      "userId": "usr-1790956934972-itvl",
+      "userName": "Docente Juan Perez",
+      "userRole": "miembro",
+      "action": "LOGIN_SUCCESS",
+      "resource": "/api/auth/login",
+      "details": "Autenticación exitosa con credenciales para 'Docente Juan Perez' (juan.perez@umayor.edu.co)",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1790956934980-b2ujar",
+      "timestamp": "2026-10-02T16:02:14.980Z"
+    },
+    {
+      "userId": "usr-admin-principal",
+      "userName": "Super Administrador del Comité Curricular",
+      "userRole": "super_admin",
+      "action": "CREATE_USER",
+      "resource": "/api/users/usr-1790956934972-itvl",
+      "details": "Alta de miembro 'Docente Juan Perez' (juan.perez@umayor.edu.co) con rol 'miembro' y voto: true",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1790956934972-qzulm7",
+      "timestamp": "2026-10-02T16:02:14.972Z"
+    },
+    {
+      "userId": "usr-admin-principal",
+      "userName": "Super Administrador del Comité Curricular",
+      "userRole": "super_admin",
+      "action": "LOGIN_SUCCESS",
+      "resource": "/api/auth/login",
+      "details": "Autenticación exitosa con credenciales para 'Super Administrador del Comité Curricular' (autoevaluacionycurriculomecanica@umayor.edu.co)",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1790956934954-2u4vrn",
+      "timestamp": "2026-10-02T16:02:14.954Z"
+    },
+    {
+      "userId": "usr-admin-principal",
+      "userName": "Super Administrador del Comité Curricular",
+      "userRole": "super_admin",
+      "action": "LOGIN_SUCCESS",
+      "resource": "/api/auth/login",
+      "details": "Autenticación exitosa con credenciales para 'Super Administrador del Comité Curricular' (autoevaluacionycurriculomecanica@umayor.edu.co)",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1790956927722-nqurk5",
+      "timestamp": "2026-10-02T16:02:07.722Z"
+    },
+    {
+      "userId": "anonymous",
+      "userName": "Desconocido / Sin Autenticación",
+      "userRole": "invitado",
+      "action": "ACCESS_DENIED_NO_AUTH",
+      "resource": "/api/quality-factors",
+      "details": "Intento de acceso a recurso protegido sin credenciales válidas.",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1790956927711-vvlab9",
+      "timestamp": "2026-10-02T16:02:07.711Z"
+    },
+    {
+      "userId": "usr-admin-principal",
+      "userName": "Super Administrador del Comité Curricular",
+      "userRole": "super_admin",
+      "action": "LOGIN_SUCCESS",
+      "resource": "/api/auth/login",
+      "details": "Autenticación exitosa con credenciales para 'Super Administrador del Comité Curricular' (autoevaluacionycurriculomecanica@umayor.edu.co)",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1790956922773-p52n5k",
+      "timestamp": "2026-10-02T16:02:02.773Z"
+    },
+    {
+      "userId": "usr-admin-principal",
+      "userName": "Super Administrador del Comité Curricular",
+      "userRole": "super_admin",
+      "action": "LOGIN_SUCCESS",
+      "resource": "/api/auth/login",
+      "details": "Autenticación exitosa con credenciales para 'Super Administrador del Comité Curricular' (autoevaluacionycurriculomecanica@umayor.edu.co)",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1790956918066-f12v5k",
+      "timestamp": "2026-10-02T16:01:58.066Z"
+    },
+    {
+      "userId": "usr-admin-principal",
+      "userName": "Super Administrador del Comité Curricular",
+      "userRole": "super_admin",
+      "action": "LOGIN_SUCCESS",
+      "resource": "/api/auth/login",
+      "details": "Autenticación exitosa con credenciales para 'Super Administrador del Comité Curricular' (autoevaluacionycurriculomecanica@umayor.edu.co)",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1790956913728-74f60z",
+      "timestamp": "2026-10-02T16:01:53.728Z"
+    },
+    {
+      "userId": "anonymous",
+      "userName": "Desconocido",
+      "userRole": "invitado",
+      "action": "LOGIN_RATE_LIMITED_BLOCKED",
+      "resource": "/api/auth/login",
+      "details": "Bloqueo temporal por exceso de intentos fallidos desde IP 127.0.0.1. Reintento en 900s",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1790956907231-bwnlxk",
+      "timestamp": "2026-10-02T16:01:47.231Z"
+    },
+    {
+      "userId": "anonymous",
+      "userName": "Desconocido",
+      "userRole": "invitado",
+      "action": "LOGIN_RATE_LIMITED_BLOCKED",
+      "resource": "/api/auth/login",
+      "details": "Bloqueo temporal por exceso de intentos fallidos desde IP 127.0.0.1. Reintento en 900s",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1790956907184-wit5hw",
+      "timestamp": "2026-10-02T16:01:47.184Z"
+    },
+    {
+      "userId": "usr-admin-principal",
+      "userName": "Super Administrador del Comité Curricular",
+      "userRole": "super_admin",
+      "action": "LOGIN_FAILED_BAD_PASSWORD",
+      "resource": "/api/auth/login",
+      "details": "Intento de acceso fallido con contraseña incorrecta para 'Super Administrador del Comité Curricular' (autoevaluacionycurriculomecanica@umayor.edu.co)",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1790956907165-grosv7",
+      "timestamp": "2026-10-02T16:01:47.165Z"
+    },
+    {
+      "userId": "usr-admin-principal",
+      "userName": "Super Administrador del Comité Curricular",
+      "userRole": "super_admin",
+      "action": "LOGIN_FAILED_BAD_PASSWORD",
+      "resource": "/api/auth/login",
+      "details": "Intento de acceso fallido con contraseña incorrecta para 'Super Administrador del Comité Curricular' (autoevaluacionycurriculomecanica@umayor.edu.co)",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1790956907149-w5rve3",
+      "timestamp": "2026-10-02T16:01:47.149Z"
+    },
+    {
+      "userId": "usr-admin-principal",
+      "userName": "Super Administrador del Comité Curricular",
+      "userRole": "super_admin",
+      "action": "LOGIN_FAILED_BAD_PASSWORD",
+      "resource": "/api/auth/login",
+      "details": "Intento de acceso fallido con contraseña incorrecta para 'Super Administrador del Comité Curricular' (autoevaluacionycurriculomecanica@umayor.edu.co)",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1790956907127-n0galr",
+      "timestamp": "2026-10-02T16:01:47.127Z"
+    },
+    {
+      "userId": "usr-admin-principal",
+      "userName": "Super Administrador del Comité Curricular",
+      "userRole": "super_admin",
+      "action": "LOGIN_FAILED_BAD_PASSWORD",
+      "resource": "/api/auth/login",
+      "details": "Intento de acceso fallido con contraseña incorrecta para 'Super Administrador del Comité Curricular' (autoevaluacionycurriculomecanica@umayor.edu.co)",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1790956907106-gdpujj",
+      "timestamp": "2026-10-02T16:01:47.106Z"
+    },
+    {
+      "userId": "usr-admin-principal",
+      "userName": "Super Administrador del Comité Curricular",
+      "userRole": "super_admin",
+      "action": "LOGIN_FAILED_BAD_PASSWORD",
+      "resource": "/api/auth/login",
+      "details": "Intento de acceso fallido con contraseña incorrecta para 'Super Administrador del Comité Curricular' (autoevaluacionycurriculomecanica@umayor.edu.co)",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1790956902613-zwnbqh",
+      "timestamp": "2026-10-02T16:01:42.613Z"
+    },
+    {
+      "userId": "usr-admin-principal",
+      "userName": "Super Administrador del Comité Curricular",
+      "userRole": "super_admin",
+      "action": "LOGIN_FAILED_BAD_PASSWORD",
+      "resource": "/api/auth/login",
+      "details": "Intento de acceso fallido con contraseña incorrecta para 'Super Administrador del Comité Curricular' (autoevaluacionycurriculomecanica@umayor.edu.co)",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1790956887387-ln4e5p",
+      "timestamp": "2026-10-02T16:01:27.387Z"
+    },
+    {
+      "userId": "usr-admin-principal",
+      "userName": "Super Administrador del Comité Curricular",
+      "userRole": "super_admin",
+      "action": "LOGIN_FAILED_BAD_PASSWORD",
+      "resource": "/api/auth/login",
+      "details": "Intento de acceso fallido con contraseña incorrecta para 'Super Administrador del Comité Curricular' (autoevaluacionycurriculomecanica@umayor.edu.co)",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1790956887363-l3u9hz",
+      "timestamp": "2026-10-02T16:01:27.363Z"
+    },
+    {
+      "userId": "usr-admin-principal",
+      "userName": "Super Administrador del Comité Curricular",
+      "userRole": "super_admin",
+      "action": "LOGIN_FAILED_BAD_PASSWORD",
+      "resource": "/api/auth/login",
+      "details": "Intento de acceso fallido con contraseña incorrecta para 'Super Administrador del Comité Curricular' (autoevaluacionycurriculomecanica@umayor.edu.co)",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1790956880336-gxx5j0",
+      "timestamp": "2026-10-02T16:01:20.336Z"
+    },
+    {
+      "userId": "usr-admin-principal",
+      "userName": "Super Administrador del Comité Curricular",
+      "userRole": "super_admin",
+      "action": "LOGIN_FAILED_BAD_PASSWORD",
+      "resource": "/api/auth/login",
+      "details": "Intento de acceso fallido con contraseña incorrecta para 'Super Administrador del Comité Curricular' (autoevaluacionycurriculomecanica@umayor.edu.co)",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1790956868161-z3fjsd",
+      "timestamp": "2026-10-02T16:01:08.161Z"
+    },
+    {
+      "userId": "usr-admin-principal",
+      "userName": "Super Administrador del Comité Curricular",
+      "userRole": "super_admin",
+      "action": "LOGIN_SUCCESS",
+      "resource": "/api/auth/login",
+      "details": "Autenticación exitosa con credenciales para 'Super Administrador del Comité Curricular' (autoevaluacionycurriculomecanica@umayor.edu.co)",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1790956861000-g87el2",
+      "timestamp": "2026-10-02T16:01:01.000Z"
+    },
+    {
+      "userId": "usr-admin-principal",
+      "userName": "Super Administrador del Comité Curricular",
+      "userRole": "super_admin",
+      "action": "LOGIN_SUCCESS",
+      "resource": "/api/auth/login",
+      "details": "Autenticación exitosa con credenciales para 'Super Administrador del Comité Curricular' (autoevaluacionycurriculomecanica@umayor.edu.co)",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1790956523842-6gorgo",
+      "timestamp": "2026-10-02T15:55:23.842Z"
+    },
+    {
+      "userId": "usr-admin-principal",
+      "userName": "Super Administrador del Comité Curricular",
+      "userRole": "super_admin",
+      "action": "LOGIN_FAILED_BAD_PASSWORD",
+      "resource": "/api/auth/login",
+      "details": "Intento de acceso fallido con contraseña incorrecta para 'Super Administrador del Comité Curricular' (autoevaluacionycurriculomecanica@umayor.edu.co)",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1790956517361-ud4af8",
+      "timestamp": "2026-10-02T15:55:17.361Z"
+    },
+    {
+      "id": "log-1790955058060",
+      "timestamp": "2026-10-02T15:30:58.060Z",
+      "userId": "system",
+      "userName": "Sistema Backend Express",
+      "userRole": "sistema",
+      "action": "INIT_SERVER_DATABASE",
+      "resource": "system",
+      "details": "Inicialización de almacén de datos persistente en servidor."
+    }
+  ]
+}

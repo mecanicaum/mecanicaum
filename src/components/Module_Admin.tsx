@@ -56,6 +56,7 @@ export const Module_Admin: React.FC = () => {
   const [memberHasVote, setMemberHasVote] = useState(true);
   const [memberPeriodo, setMemberPeriodo] = useState('2026 - 2028');
   const [memberIsExternal, setMemberIsExternal] = useState(false);
+  const [memberPassword, setMemberPassword] = useState('');
 
   // Role Modal State
   const [showRoleModal, setShowRoleModal] = useState(false);
@@ -90,6 +91,7 @@ export const Module_Admin: React.FC = () => {
     setMemberHasVote(true);
     setMemberPeriodo('2026 - 2028');
     setMemberIsExternal(false);
+    setMemberPassword('Umayor2026!');
     setShowMemberModal(true);
   };
 
@@ -104,6 +106,7 @@ export const Module_Admin: React.FC = () => {
     setMemberHasVote(u.hasVote !== false);
     setMemberPeriodo(u.periodo || '2026 - 2028');
     setMemberIsExternal(u.isExternal || false);
+    setMemberPassword(u.password || '');
     setShowMemberModal(true);
   };
 
@@ -132,6 +135,7 @@ export const Module_Admin: React.FC = () => {
         hasVote: memberHasVote,
         periodo: memberPeriodo,
         isExternal: memberIsExternal,
+        password: memberPassword.trim() || undefined,
       });
     } else {
       createUser({
@@ -147,6 +151,7 @@ export const Module_Admin: React.FC = () => {
         hasVote: memberHasVote,
         periodo: memberPeriodo,
         isExternal: memberIsExternal,
+        password: memberPassword.trim() || 'Umayor2026!',
       });
     }
 
@@ -776,6 +781,22 @@ export const Module_Admin: React.FC = () => {
                     </span>
                   </label>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                  Contraseña o PIN Institucional de Acceso
+                </label>
+                <input
+                  type="text"
+                  value={memberPassword}
+                  onChange={(e) => setMemberPassword(e.target.value)}
+                  placeholder="Ej. ClaveSegura2026* o PIN numérico"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Esta credencial es obligatoria para ingresar al sistema desde el portal de inicio de sesión.
+                </p>
               </div>
 
               <div className="pt-2 border-t border-slate-100 flex justify-end gap-2">

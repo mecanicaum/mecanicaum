@@ -29,6 +29,16 @@ import {
   CustomRole,
 } from './types';
 
+import {
+  sanitizeUser,
+  signSessionToken,
+  verifyPassword,
+  hashPassword,
+  checkLoginRateLimit,
+  recordFailedLogin,
+  resetLoginRateLimit,
+} from './security';
+
 export const router = Router();
 
 // Apply global user authentication parser
@@ -44,8 +54,8 @@ router.get('/bootstrap', (req: AuthenticatedRequest, res: Response) => {
   const currentUser = db.getUserById(currentUserId) || db.getUsers()[0];
 
   res.json({
-    currentUser,
-    users: db.getUsers(),
+    currentUser: currentUser ? sanitizeUser(currentUser) : null,
+    users: db.getUsers().map(sanitizeUser),
     estamentos: db.getEstamentos(),
     customRoles: db.getCustomRoles(),
     meetings: db.getMeetings(),
@@ -56,6 +66,96 @@ router.get('/bootstrap', (req: AuthenticatedRequest, res: Response) => {
     accessRequests: db.getAccessRequests(),
     notifications: db.getNotifications(),
     digitalSeals: db.getDigitalSeals(),
+  });
+});
+
+/**
+ * --------------------------------------------------------------------------------
+ * INSTITUTIONAL CREDENTIALS LOGIN (Email + Password Verification + Rate Limiting)
+ * --------------------------------------------------------------------------------
+ */
+router.post('/auth/login', (req: AuthenticatedRequest, res: Response) => {
+  const clientIp = req.clientIp || '127.0.0.1';
+
+  // 1. Enforce Rate Limiting & Brute Force Defense
+  const rateLimitStatus = checkLoginRateLimit(clientIp);
+  if (rateLimitStatus.isBlocked) {
+    db.logAudit({
+      userId: 'anonymous',
+      userName: 'Desconocido',
+      userRole: 'invitado',
+      action: 'LOGIN_RATE_LIMITED_BLOCKED',
+      resource: '/api/auth/login',
+      details: `Bloqueo temporal por exceso de intentos fallidos desde IP ${clientIp}. Reintento en ${rateLimitStatus.remainingSeconds}s`,
+      ipAddress: clientIp,
+    });
+
+    res.status(429).json({
+      error: 'RATE_LIMIT_EXCEEDED',
+      message: `Demasiados intentos fallidos de autenticación. Por motivos de seguridad, el acceso está temporalmente suspendido para su IP. Intente de nuevo en ${rateLimitStatus.remainingSeconds} segundos.`,
+      retryAfterSeconds: rateLimitStatus.remainingSeconds,
+    });
+    return;
+  }
+
+  const { email, password } = req.body;
+  if (!email || !password) {
+    res.status(400).json({ error: 'Debe ingresar su correo institucional y su contraseña.' });
+    return;
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+  const user = db.getUserByEmail(normalizedEmail);
+
+  if (!user) {
+    recordFailedLogin(clientIp);
+    res.status(401).json({ error: 'Correo institucional no registrado en el padrón del comité curricular.' });
+    return;
+  }
+
+  const expectedPasswordOrHash = user.password || (user.role === 'super_admin' ? 'AdminCurriculo2026*' : 'Umayor2026!');
+  const isMatch = verifyPassword(password, expectedPasswordOrHash, (user as any).passwordSalt);
+
+  if (!isMatch) {
+    recordFailedLogin(clientIp);
+    db.logAudit({
+      userId: user.id,
+      userName: user.name,
+      userRole: user.role,
+      action: 'LOGIN_FAILED_BAD_PASSWORD',
+      resource: '/api/auth/login',
+      details: `Intento de acceso fallido con contraseña incorrecta para '${user.name}' (${normalizedEmail})`,
+      ipAddress: clientIp,
+    });
+    res.status(401).json({ error: 'Contraseña o PIN de acceso incorrecto. Verifique sus credenciales.' });
+    return;
+  }
+
+  // Login Success: Reset rate limit tracker
+  resetLoginRateLimit(clientIp);
+
+  // Generate HMAC-SHA256 Cryptographic Session Token
+  const token = signSessionToken({
+    userId: user.id,
+    email: user.email,
+    role: user.role,
+  });
+
+  db.logAudit({
+    userId: user.id,
+    userName: user.name,
+    userRole: user.role,
+    action: 'LOGIN_SUCCESS',
+    resource: '/api/auth/login',
+    details: `Autenticación exitosa con credenciales para '${user.name}' (${normalizedEmail})`,
+    ipAddress: clientIp,
+  });
+
+  res.json({
+    success: true,
+    user: sanitizeUser(user),
+    token,
+    message: `Autenticación concedida para ${user.name}.`,
   });
 });
 
@@ -144,13 +244,25 @@ router.post('/auth/google-sso', (req: AuthenticatedRequest, res: Response) => {
  * --------------------------------------------------------------------------------
  */
 router.get('/users', (req: AuthenticatedRequest, res: Response) => {
-  res.json(db.getUsers());
+  res.json(db.getUsers().map(sanitizeUser));
 });
 
 router.post('/users', requireAuth, requireRoles(['presidente', 'seguimiento', 'autoevaluacion']), (req: AuthenticatedRequest, res: Response) => {
   const data = req.body as Partial<User>;
   if (!data.name || !data.email) {
     res.status(400).json({ error: 'Faltan campos obligatorios (nombre, correo).' });
+    return;
+  }
+
+  // Privilege Escalation Prevention
+  if (data.role === 'super_admin' && req.user!.role !== 'super_admin') {
+    res.status(403).json({ error: 'Operación denegada: Solo el Super Administrador puede asignar el rol de Super Administrador.' });
+    return;
+  }
+
+  const normalizedEmail = data.email.toLowerCase().trim();
+  if (db.getUserByEmail(normalizedEmail)) {
+    res.status(409).json({ error: 'Ya existe un integrante registrado con este correo electrónico.' });
     return;
   }
 
@@ -161,21 +273,31 @@ router.post('/users', requireAuth, requireRoles(['presidente', 'seguimiento', 'a
     .map((n) => n[0].toUpperCase())
     .join('');
 
+  let passwordHash = undefined;
+  let passwordSalt = undefined;
+  if (data.password) {
+    const hashed = hashPassword(data.password);
+    passwordHash = hashed.hash;
+    passwordSalt = hashed.salt;
+  }
+
   const newUser: User = {
     id: `usr-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-    name: data.name,
-    email: data.email,
+    name: data.name.trim(),
+    email: normalizedEmail,
     role: data.role || 'miembro',
     roleId: data.roleId,
     estamentoId: data.estamentoId,
     estamentoName: data.estamentoName,
-    department: data.department || 'Ingeniería Mecánica',
-    academicTitle: data.academicTitle || 'Docente / Investigador',
+    department: (data.department || 'Ingeniería Mecánica').trim(),
+    academicTitle: (data.academicTitle || 'Docente / Investigador').trim(),
     avatarInitials: initials || 'MI',
     isExternal: data.isExternal || false,
     hasVote: data.hasVote !== undefined ? data.hasVote : true,
-    periodo: data.periodo || '2026 - 2028',
+    periodo: (data.periodo || '2026 - 2028').trim(),
     active: true,
+    password: passwordHash,
+    passwordSalt,
   };
 
   db.addUser(newUser);
@@ -190,12 +312,38 @@ router.post('/users', requireAuth, requireRoles(['presidente', 'seguimiento', 'a
     ipAddress: req.clientIp,
   });
 
-  wsHub.broadcast('user:created', newUser, req.user!.id);
-  res.status(201).json(newUser);
+  const safeNewUser = sanitizeUser(newUser);
+  wsHub.broadcast('user:created', safeNewUser, req.user!.id);
+  res.status(201).json(safeNewUser);
 });
 
 router.put('/users/:id', requireAuth, requireRoles(['presidente', 'seguimiento', 'autoevaluacion']), (req: AuthenticatedRequest, res: Response) => {
-  const updated = db.updateUser(req.params.id, req.body);
+  const existing = db.getUserById(req.params.id);
+  if (!existing) {
+    res.status(404).json({ error: 'Usuario no encontrado.' });
+    return;
+  }
+
+  // Prevent Non-Super-Admins from modifying Super Admin account
+  if (existing.role === 'super_admin' && req.user!.role !== 'super_admin') {
+    res.status(403).json({ error: 'Operación denegada: No tiene facultades para modificar la cuenta del Super Administrador.' });
+    return;
+  }
+
+  // Prevent Privilege Escalation
+  if (req.body.role === 'super_admin' && req.user!.role !== 'super_admin') {
+    res.status(403).json({ error: 'Operación denegada: No puede promover cuentas a Super Administrador.' });
+    return;
+  }
+
+  const updates = { ...req.body };
+  if (updates.password) {
+    const hashed = hashPassword(updates.password);
+    updates.password = hashed.hash;
+    updates.passwordSalt = hashed.salt;
+  }
+
+  const updated = db.updateUser(req.params.id, updates);
   if (!updated) {
     res.status(404).json({ error: 'Usuario no encontrado.' });
     return;
@@ -211,8 +359,9 @@ router.put('/users/:id', requireAuth, requireRoles(['presidente', 'seguimiento',
     ipAddress: req.clientIp,
   });
 
-  wsHub.broadcast('user:updated', updated, req.user!.id);
-  res.json(updated);
+  const safeUpdated = sanitizeUser(updated);
+  wsHub.broadcast('user:updated', safeUpdated, req.user!.id);
+  res.json(safeUpdated);
 });
 
 router.delete('/users/:id', requireAuth, requireRoles(['presidente']), (req: AuthenticatedRequest, res: Response) => {
