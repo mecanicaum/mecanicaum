@@ -1,4 +1,4 @@
-export type UserRole = 'presidente' | 'miembro' | 'seguimiento' | 'autoevaluacion' | 'invitado_externo';
+export type UserRole = 'super_admin' | 'presidente' | 'miembro' | 'seguimiento' | 'autoevaluacion' | 'invitado_externo';
 
 export interface Estamento {
   id: string;

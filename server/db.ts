@@ -35,12 +35,12 @@ const DB_FILE = path.join(DATA_DIR, 'sig_curriculo_db.json');
 
 const INITIAL_ADMIN_USER: User = {
   id: 'usr-admin-principal',
-  name: 'Administrador Comité Curricular',
+  name: 'Super Administrador del Comité Curricular',
   email: 'autoevaluacionycurriculomecanica@umayor.edu.co',
-  role: 'presidente',
-  department: 'Ingeniería Mecánica / Acreditación y Currículo',
-  academicTitle: 'Dirección de Autoevaluación & Comité Curricular',
-  avatarInitials: 'CC',
+  role: 'super_admin',
+  department: 'Facultad de Ingeniería · Depto. Ingeniería Mecánica',
+  academicTitle: 'Super Administrador / Presidencia Comité Curricular',
+  avatarInitials: 'SA',
   hasVote: true,
   periodo: '2026 - 2028',
   active: true,

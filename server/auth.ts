@@ -80,7 +80,7 @@ export function requireRoles(allowedRoles: UserRole[]) {
       return;
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    if (req.user.role !== 'super_admin' && !allowedRoles.includes(req.user.role)) {
       db.logAudit({
         userId: req.user.id,
         userName: req.user.name,
@@ -110,6 +110,11 @@ export function requireVoteRight(req: AuthenticatedRequest, res: Response, next:
   if (!req.user) {
     res.status(401).json({ error: 'AUTH_REQUIRED', message: 'No autenticado.' });
     return;
+  }
+
+  // Super Admin always has voting rights
+  if (req.user.role === 'super_admin') {
+    return next();
   }
 
   // Check user level hasVote
@@ -143,21 +148,21 @@ export function requireActSigningAuthority(req: AuthenticatedRequest, res: Respo
     return;
   }
 
-  const isPresident = req.user.role === 'presidente';
-  if (!isPresident) {
+  const hasSigningAuthority = req.user.role === 'super_admin' || req.user.role === 'presidente';
+  if (!hasSigningAuthority) {
     db.logAudit({
       userId: req.user.id,
       userName: req.user.name,
       userRole: req.user.role,
       action: 'SIGN_ACT_DENIED',
       resource: req.originalUrl,
-      details: 'Intento de cierre o refrendación digital de acta por usuario no investido como Presidente.',
+      details: 'Intento de cierre o refrendación digital de acta por usuario no investido como Presidente o Super Administrador.',
       ipAddress: req.clientIp,
     });
 
     res.status(403).json({
       error: 'FORBIDDEN_SIGNING_AUTHORITY_REQUIRED',
-      message: 'Operación denegada: La refrendación digital y cierre de actas es una facultad privativa de la Presidencia del Comité Curricular.',
+      message: 'Operación denegada: La refrendación digital y cierre de actas es una facultad privativa de la Presidencia del Comité Curricular o del Super Administrador.',
     });
     return;
   }
