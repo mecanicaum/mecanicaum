@@ -51,13 +51,13 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-100 text-slate-900 antialiased">
       <Header currentTab={currentTab} setCurrentTab={setCurrentTab} />
 
-      <div className="flex flex-1 w-full max-w-[1700px] mx-auto">
+      <div className="flex flex-1 w-full max-w-[1700px] mx-auto px-2 sm:px-3 lg:px-4">
         <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} />
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 overflow-y-auto max-w-7xl">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 overflow-y-auto max-w-7xl bg-transparent">
           {renderCurrentModule()}
         </main>
       </div>
