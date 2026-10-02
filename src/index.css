@@ -1,25 +1,33 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-serif: 'Newsreader', Georgia, serif;
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-serif-heading: 'Playfair Display', Georgia, serif;
+  --font-cinzel: 'Cinzel', serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  --color-umayor-green: #006A4E;
+  --color-umayor-gold: #C49E2D;
+  --color-umayor-gold-light: #E0C158;
+  --color-umayor-text: #1A1A1A;
+  --color-umayor-muted: #4A5568;
+  --color-umayor-bg: #F9F9F9;
+  --color-umayor-surface: #FFFFFF;
+  --color-umayor-border: #E2E8F0;
 }
 
 :root {
   color-scheme: light;
-  --bg-page: #f4f7fb;
-  --bg-panel: rgba(255, 255, 255, 0.86);
-  --bg-subtle: #f8fafc;
-  --border-soft: #e2e8f0;
-  --border-strong: #cbd5e1;
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
-  --shadow-soft: 0 10px 30px rgba(15, 23, 42, 0.06);
-  --shadow-card: 0 8px 20px rgba(15, 23, 42, 0.04);
-  --radius-card: 18px;
-  --radius-button: 12px;
+  --bg-page: #F9F9F9;
+  --bg-panel: #FFFFFF;
+  --text-primary: #1A1A1A;
+  --text-secondary: #4A5568;
+  --border-color: #E2E8F0;
+  --shadow-umayor: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-umayor-lg: 0 10px 25px -3px rgba(0, 106, 78, 0.08), 0 4px 6px -2px rgba(196, 158, 45, 0.05);
+  --radius-card: 12px;
+  --radius-button: 6px;
+  --font-scale: 1;
 }
 
 * {
@@ -28,107 +36,167 @@
 
 html {
   background: var(--bg-page);
+  font-size: calc(16px * var(--font-scale, 1));
 }
 
 body {
   margin: 0;
   font-family: var(--font-sans);
   color: var(--text-primary);
-  background:
-    radial-gradient(circle at top, rgba(148, 163, 184, 0.12), transparent 24%),
-    var(--bg-page);
+  background-color: var(--bg-page);
+  /* Sutil patrón de fondo de contornos arquitectónicos / arcos coloniales */
+  background-image: radial-gradient(circle at 50% 0%, rgba(196, 158, 45, 0.03) 0%, transparent 75%),
+                    linear-gradient(135deg, rgba(0, 106, 78, 0.015) 0%, transparent 100%);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-#root {
-  min-height: 100vh;
+/* Títulos Elegantes (Playfair Display / Cinzel) */
+h1, h2, .font-serif-heading, .font-serif {
+  font-family: var(--font-serif-heading);
 }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
+.font-cinzel {
+  font-family: var(--font-cinzel);
 }
 
-::selection {
-  background: rgba(59, 130, 246, 0.14);
-  color: var(--text-primary);
+h1 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
-main,
-aside,
-header,
-section,
-article,
+h2 {
+  font-weight: 700;
+}
+
+/* Lema Institucional en Cursiva Dorada */
+.lema-institucional {
+  font-family: var(--font-serif-heading);
+  font-style: italic;
+  color: #C49E2D;
+  letter-spacing: 0.02em;
+}
+
+/* Base button and input styling to enforce 6px border radius standard */
+button:not(.rounded-full),
+input:not(.rounded-full),
+select:not(.rounded-full),
+textarea:not(.rounded-full) {
+  border-radius: var(--radius-button);
+}
+
+/* Card and surface styling with 12px radius & soft shadow */
+.umayor-card,
 div[data-slot='card'],
-.card,
-.rounded-xl,
-.rounded-lg {
-  transition: box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+.card {
+  border-radius: var(--radius-card);
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-umayor);
 }
 
+/* Hito de Progreso con borde dorado rico e icono interior */
+.hito-dorado {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 9999px;
+  border: 2px solid #C49E2D;
+  background-color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #C49E2D;
+  box-shadow: 0 2px 8px rgba(196, 158, 45, 0.15);
+  transition: all 0.2s ease;
+}
+
+.hito-dorado:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(196, 158, 45, 0.25);
+  background-color: #006A4E;
+  color: #FFFFFF;
+  border-color: #006A4E;
+}
+
+/* High-accessibility focus ring */
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
-textarea:focus-visible {
-  outline: 2px solid rgba(59, 130, 246, 0.35);
+textarea:focus-visible,
+a:focus-visible {
+  outline: 2px solid #C49E2D;
   outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(196, 158, 45, 0.2);
 }
 
+/* High Contrast Mode for WCAG 2.1 AAA Accessibility */
+.high-contrast {
+  --bg-page: #000000 !important;
+  --bg-panel: #121212 !important;
+  --text-primary: #FFFFFF !important;
+  --text-secondary: #E2E8F0 !important;
+  --border-color: #C49E2D !important;
+  color-scheme: dark;
+}
+
+.high-contrast body,
+.high-contrast main,
+.high-contrast header,
+.high-contrast aside {
+  background-color: #000000 !important;
+  color: #FFFFFF !important;
+}
+
+.high-contrast .bg-white,
+.high-contrast .bg-slate-50,
+.high-contrast .bg-slate-100 {
+  background-color: #121212 !important;
+  color: #FFFFFF !important;
+  border-color: #C49E2D !important;
+}
+
+.high-contrast .text-slate-900,
+.high-contrast .text-slate-800,
+.high-contrast .text-slate-700 {
+  color: #FFFFFF !important;
+}
+
+.high-contrast a,
+.high-contrast button {
+  text-decoration: underline;
+}
+
+/* Scrollbars */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.7);
+  background: rgba(0, 106, 78, 0.25);
   border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.9);
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  background: rgba(196, 158, 45, 0.6);
 }
 
+/* Print Styles */
 @media print {
   @page {
-    margin: 15mm 15mm 15mm 15mm;
-    size: letter portrait;
+    margin: 15mm;
   }
-
+  
   body {
-    background: white !important;
-    color: black !important;
-    font-size: 11pt !important;
+    background: #FFFFFF !important;
+    color: #000000 !important;
   }
 
-  header, aside, .print\:hidden, nav {
+  .print\\:hidden,
+  aside,
+  header,
+  .accessibility-bar {
     display: none !important;
-  }
-
-  #printable-acta {
-    display: block !important;
-    position: static !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    box-shadow: none !important;
-    border: none !important;
-    overflow: visible !important;
-  }
-
-  table, tr, td, th {
-    page-break-inside: avoid;
-  }
-
-  .border {
-    border-color: #cbd5e1 !important;
   }
 }

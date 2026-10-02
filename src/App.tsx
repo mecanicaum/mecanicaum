@@ -12,6 +12,8 @@ import { ExternalGuestView } from './components/ExternalGuestView';
 import { LoginView } from './components/LoginView';
 import { PublicActVerificationView } from './components/PublicActVerificationView';
 
+import { AccessibilityBar } from './components/AccessibilityBar';
+
 const AppContent: React.FC = () => {
   const { currentUser, setActiveMeetingId, isAuthenticated } = useApp();
   const [currentTab, setCurrentTab] = useState<string>('modulo_a');
@@ -84,13 +86,14 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 antialiased">
+    <div className="min-h-screen bg-[#F8FAF9] text-[#1E293B] antialiased flex flex-col font-sans">
+      <AccessibilityBar />
       <Header currentTab={currentTab} setCurrentTab={setCurrentTab} />
 
-      <div className="flex flex-1 w-full max-w-[1700px] mx-auto px-2 sm:px-3 lg:px-4">
+      <div className="flex flex-1 w-full max-w-[1700px] mx-auto px-2 sm:px-3 lg:px-4 py-3">
         <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} />
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 overflow-y-auto max-w-7xl bg-transparent">
+        <main className="flex-1 p-3 sm:p-5 lg:p-6 min-w-0 overflow-y-auto max-w-7xl bg-transparent">
           {renderCurrentModule()}
         </main>
       </div>

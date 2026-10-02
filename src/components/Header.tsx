@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { UserRole } from '../types';
+import { UmayorLogo } from './UmayorLogo';
 import { 
   Bell, 
   ShieldCheck, 
@@ -129,55 +130,52 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-slate-200 bg-white/95 px-4 sm:px-6 backdrop-blur-md">
-      {/* Zone 1: Institutional Wordmark & Faculty Identity */}
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-[#C49E2D]/40 bg-[#006A4E] text-white px-4 sm:px-6 shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
+      {/* Zone 1: Institutional Logo & Faculty Identity */}
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-900 text-white shadow-xs font-semibold text-sm">
-            CC
-          </div>
-          <div>
+        <div className="flex items-center gap-3">
+          <UmayorLogo size="md" variant="full" className="bg-[#00523E] px-2.5 py-1 rounded-md border border-[#C49E2D]/30" />
+          <div className="hidden sm:block border-l border-[#C49E2D]/30 pl-3">
             <div className="flex items-center gap-2">
-              <span className="text-base font-bold tracking-tight text-slate-900">
+              <span className="text-sm font-cinzel font-bold tracking-tight text-white">
                 SIG-CURRÍCULO
               </span>
-              <span className="hidden sm:inline text-xs text-slate-400">·</span>
-              <span className="hidden sm:inline text-xs text-slate-600 font-medium">
-                Comité Curricular de Ingeniería Mecánica
+              <span className="hidden md:inline-flex items-center text-[9px] font-bold bg-[#C49E2D] text-[#006A4E] px-2 py-0.5 rounded-md font-mono uppercase tracking-wider">
+                CNA / ABET
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 truncate max-w-xs sm:max-w-md">
-              Facultad de Ingeniería · Institución Universitaria Mayor de Cartagena · Acreditación CNA / ABET
+            <p className="text-[11px] text-slate-200 truncate max-w-xs sm:max-w-md font-sans">
+              Comité Curricular · Facultad de Ingeniería
             </p>
           </div>
         </div>
       </div>
 
       {/* Zone 2: Context */}
-      <div className="hidden lg:flex items-center gap-3 text-xs font-medium text-slate-600">
-        <span className="text-slate-400">Vista:</span>
-        <span className="capitalize text-slate-900 font-semibold bg-slate-100 px-2.5 py-1 rounded">
+      <div className="hidden lg:flex items-center gap-2 text-xs font-medium text-slate-200">
+        <span className="text-[#C49E2D] font-bold uppercase tracking-wider text-[10px]">Módulo:</span>
+        <span className="capitalize text-white font-semibold bg-[#00523E] px-2.5 py-1 rounded-md border border-[#C49E2D]/30">
           {currentTab.replace('_', ' ')}
         </span>
       </div>
 
       {/* Zone 3: Interactive Role Switcher, Database Menu, Notifications & Actions */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-2 sm:gap-2.5">
         {/* Institutional Single Sign-On Button / Connected Badge */}
         {googleUser ? (
-          <div className="flex items-center gap-1.5 bg-blue-50/90 border border-blue-200 px-2.5 py-1 rounded-lg text-xs">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-700 text-[10px] font-bold text-white">
+          <div className="flex items-center gap-1.5 bg-[#00523E] border border-[#C49E2D]/40 px-2.5 py-1 rounded-md text-xs text-white">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#C49E2D] text-[10px] font-bold text-[#006A4E]">
               {googleUser.name.slice(0, 1)}
             </span>
             <div className="hidden sm:block text-left">
-              <span className="text-[10px] font-bold text-blue-900 block leading-none">SSO Institucional</span>
-              <span className="text-[9px] text-blue-700 font-mono block leading-tight truncate max-w-[120px]">
+              <span className="text-[10px] font-bold text-[#C49E2D] block leading-none">SSO Activo</span>
+              <span className="text-[9px] text-slate-200 font-mono block leading-tight truncate max-w-[120px]">
                 {googleUser.email}
               </span>
             </div>
             <button
               onClick={signOutGoogle}
-              className="text-slate-400 hover:text-slate-700 p-0.5 ml-1 text-xs font-bold"
+              className="text-slate-300 hover:text-white p-0.5 ml-1 text-xs font-bold cursor-pointer"
               title="Cerrar sesión institucional"
             >
               <X className="h-3 w-3" />
@@ -186,10 +184,10 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
         ) : (
           <button
             onClick={() => setShowSsoModal(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50/80 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-blue-800 hover:bg-blue-100 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-md border border-[#C49E2D]/50 bg-[#00523E] px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#C49E2D] hover:text-[#006A4E] transition-colors cursor-pointer"
             title="Iniciar sesión institucional"
           >
-            <UserCheck className="h-3.5 w-3.5 text-blue-700" />
+            <UserCheck className="h-3.5 w-3.5 text-[#C49E2D]" />
             <span className="hidden sm:inline">Acceso institucional</span>
             <span className="sm:hidden">SSO</span>
           </button>
@@ -199,12 +197,12 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
         <div className="relative">
           <button
             onClick={() => setShowDbMenu(!showDbMenu)}
-            className="flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-xs font-medium text-slate-700 hover:bg-slate-100 transition-colors"
+            className="flex h-8 items-center gap-1.5 rounded-md border border-[#C49E2D]/40 bg-[#00523E] px-2.5 text-xs font-medium text-white hover:bg-[#00523E]/80 transition-colors cursor-pointer"
             title="Gestión de respaldos y almacenamiento local"
           >
-            <Database className="h-3.5 w-3.5 text-slate-600" />
+            <Database className="h-3.5 w-3.5 text-[#C49E2D]" />
             <span className="hidden md:inline">Base de datos</span>
-            <ChevronDown className="h-3 w-3 text-slate-400" />
+            <ChevronDown className="h-3 w-3 text-slate-300" />
           </button>
 
           {showDbMenu && (
@@ -290,27 +288,27 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
         <div className="relative">
           <button
             onClick={() => setShowRoleSelector(!showRoleSelector)}
-            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-left text-xs hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            className="flex items-center gap-2 rounded-md border border-[#C49E2D]/40 bg-[#00523E] px-2.5 py-1 text-left text-xs text-white hover:bg-[#00523E]/80 transition-colors focus:outline-none focus:ring-2 focus:ring-[#C49E2D] cursor-pointer"
             title="Cambiar entre los roles RBAC institucionales"
           >
-            <div className="flex h-6 w-6 items-center justify-center rounded bg-slate-800 text-[10px] font-bold text-white">
+            <div className="flex h-6 w-6 items-center justify-center rounded bg-[#C49E2D] text-[10px] font-bold text-[#006A4E] shadow-xs">
               {currentUser.avatarInitials}
             </div>
             <div className="hidden md:block">
-              <p className="font-semibold text-slate-800 leading-tight truncate max-w-[130px]">
+              <p className="font-semibold text-white leading-tight truncate max-w-[130px]">
                 {currentUser.name.split(' ')[0]} {currentUser.name.split(' ')[1]}
               </p>
-              <p className="text-[10px] text-slate-500 capitalize">
+              <p className="text-[10px] text-[#C49E2D] font-bold capitalize">
                 {roleLabelsMap[currentUser.role]?.title}
               </p>
             </div>
-            <ChevronDown className="h-3.5 w-3.5 text-slate-400 ml-0.5" />
+            <ChevronDown className="h-3.5 w-3.5 text-slate-300 ml-0.5" />
           </button>
 
           {showRoleSelector && (
-            <div className="absolute right-0 mt-2 w-80 rounded-xl border border-slate-200 bg-white p-2 shadow-xl ring-1 ring-slate-950/5 z-50">
+            <div className="absolute right-0 mt-2 w-80 rounded-xl border border-[#E2E8F0] bg-white p-2 shadow-[0_4px_12px_rgba(15,44,89,0.15)] ring-1 ring-slate-950/5 z-50 text-[#1E293B]">
               <div className="px-2 py-1.5 border-b border-slate-100 mb-1">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 font-heading">
                   {currentUser.role === 'super_admin' ? 'Simular perfil' : 'Perfil institucional'}
                 </p>
                 <p className="text-xs text-slate-500">
@@ -321,7 +319,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
               </div>
 
               {currentUser.role === 'super_admin' ? (
-                <div className="space-y-1">
+                <div className="space-y-1 max-h-60 overflow-y-auto">
                   {users.map((u) => {
                     const isCurrent = u.id === currentUser.id;
                     const config = roleLabelsMap[u.role] || roleLabelsMap.miembro;
@@ -332,20 +330,20 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
                           switchUser(u.id);
                           setShowRoleSelector(false);
                         }}
-                        className={`flex w-full items-start gap-2.5 rounded-lg p-2 text-left text-xs transition-colors ${
-                          isCurrent ? 'bg-slate-100 font-semibold' : 'hover:bg-slate-50'
+                        className={`flex w-full items-start gap-2.5 rounded-md p-2 text-left text-xs transition-colors ${
+                          isCurrent ? 'bg-[#0F2C59]/10 font-semibold border border-[#0F2C59]/20' : 'hover:bg-slate-50'
                         }`}
                       >
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-slate-900 text-xs font-bold text-white mt-0.5">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-[#0F2C59] text-xs font-bold text-white mt-0.5">
                           {u.avatarInitials}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <span className="truncate text-slate-900 font-medium">
+                            <span className="truncate text-[#1E293B] font-medium">
                               {u.name}
                             </span>
                             {isCurrent && (
-                              <span className="text-[10px] text-emerald-700 font-medium">
+                              <span className="text-[10px] text-[#0088CC] font-bold">
                                 Activo
                               </span>
                             )}
@@ -364,8 +362,8 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
                   })}
                 </div>
               ) : (
-                <div className="p-3 bg-slate-50 rounded-lg text-xs space-y-1">
-                  <p className="font-bold text-slate-900">{currentUser.name}</p>
+                <div className="p-3 bg-slate-50 rounded-md text-xs space-y-1 border border-slate-100">
+                  <p className="font-bold text-[#0F2C59] font-heading">{currentUser.name}</p>
                   <p className="text-slate-500 font-mono text-[11px]">{currentUser.email}</p>
                   <p className="text-slate-600 text-[11px]">{currentUser.academicTitle || currentUser.roleLabel}</p>
                   <span className={`inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-md border ${roleLabelsMap[currentUser.role]?.badge}`}>
@@ -390,7 +388,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
                     setCurrentTab('modulo_admin');
                     setShowRoleSelector(false);
                   }}
-                  className="text-[11px] text-blue-700 font-semibold hover:underline flex items-center gap-1 px-1 py-0.5"
+                  className="text-[11px] text-[#0088CC] font-semibold hover:underline flex items-center gap-1 px-1 py-0.5"
                 >
                   Configuración
                 </button>
@@ -402,10 +400,10 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
         {/* Header Direct Logout Button */}
         <button
           onClick={() => logout()}
-          className="flex h-8 items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 hover:border-rose-300 transition-colors"
+          className="flex h-8 items-center gap-1.5 rounded-md border border-rose-400/40 bg-rose-500/20 px-2.5 text-xs font-semibold text-rose-200 hover:bg-rose-500/30 hover:text-white transition-colors"
           title="Cerrar sesión institucional y volver al portal de ingreso"
         >
-          <LogOut className="h-3.5 w-3.5 text-rose-600" />
+          <LogOut className="h-3.5 w-3.5 text-rose-300" />
           <span className="hidden sm:inline">Cerrar sesión</span>
         </button>
 
@@ -413,12 +411,12 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
         <div className="relative">
           <button
             onClick={() => setShowNotifications(!showNotifications)}
-            className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+            className="relative flex h-8 w-8 items-center justify-center rounded-md border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-colors"
             title="Bandeja de notificaciones"
           >
             <Bell className="h-4 w-4" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-600 text-[9px] font-bold text-white">
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#FFB800] text-[9px] font-bold text-[#0F2C59] shadow-xs">
                 {unreadCount}
               </span>
             )}
