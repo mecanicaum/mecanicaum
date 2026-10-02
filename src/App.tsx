@@ -9,10 +9,16 @@ import { ModuleD_SelfEvaluation } from './components/ModuleD_SelfEvaluation';
 import { ModuleE_Dashboard } from './components/ModuleE_Dashboard';
 import { Module_Admin } from './components/Module_Admin';
 import { ExternalGuestView } from './components/ExternalGuestView';
+import { LoginView } from './components/LoginView';
 
 const AppContent: React.FC = () => {
-  const { currentUser, setActiveMeetingId } = useApp();
+  const { currentUser, setActiveMeetingId, isAuthenticated } = useApp();
   const [currentTab, setCurrentTab] = useState<string>('modulo_a');
+
+  // If user is not authenticated, render the dedicated institutional login portal
+  if (!isAuthenticated) {
+    return <LoginView onLoginSuccess={() => setCurrentTab('modulo_a')} />;
+  }
 
   const handleGoToLiveMeeting = (meetingId: string) => {
     setActiveMeetingId(meetingId);

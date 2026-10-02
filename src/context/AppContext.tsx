@@ -69,10 +69,12 @@ interface AppContextType {
   switchRole: (role: UserRole) => void;
 
   // Institutional Single Sign-On Authentication
+  isAuthenticated: boolean;
   googleUser: { email: string; name: string; photoURL?: string | null } | null;
   signInWithGoogle: () => Promise<User | null>;
   signInWithInstitutionalEmail: (email: string, name?: string, role?: UserRole) => Promise<User>;
   signOutGoogle: () => Promise<void>;
+  logout: () => void;
 
   // Committee Members Administration
   createUser: (userData: Omit<User, 'id' | 'avatarInitials'>) => Promise<User>;
@@ -180,6 +182,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [notifications, setNotifications] = useLocalStorage<InstitutionalNotification[]>('notifications', DEFAULT_NOTIFICATIONS);
   const [digitalSeals, setDigitalSeals] = useLocalStorage<DigitalActSeal[]>('digital_seals', []);
   const [googleUser, setGoogleUser] = useLocalStorage<{ email: string; name: string; photoURL?: string | null } | null>('session_user', null);
+  const [isAuthenticated, setIsAuthenticated] = useLocalStorage<boolean>('is_authenticated', true);
   const [userSettings, setUserSettings] = useLocalStorage<UserSettings>('user_settings', DEFAULT_USER_SETTINGS);
 
   const [isLiveSyncConnected, setIsLiveSyncConnected] = useState<boolean>(false);
@@ -412,6 +415,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(activeUser);
     setApiUserId(activeUser.id);
     realtime.identify(activeUser.id);
+    setIsAuthenticated(true);
 
     try {
       await api.loginGoogleSSO(session.email, session.name);
@@ -431,11 +435,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const signOutGoogle = async () => {
     await logoutInstitutional();
     setGoogleUser(null);
-    if (users.length > 0) {
-      setCurrentUser(users[0]);
-      setApiUserId(users[0].id);
-      realtime.identify(users[0].id);
-    }
+    setIsAuthenticated(false);
+  };
+
+  const logout = () => {
+    signOutGoogle();
   };
 
   // User Management
@@ -1241,10 +1245,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         users,
         switchUser,
         switchRole,
+        isAuthenticated,
         googleUser,
         signInWithGoogle,
         signInWithInstitutionalEmail,
         signOutGoogle,
+        logout,
         createUser,
         updateUser,
         deleteUser,

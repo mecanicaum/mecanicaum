@@ -10,7 +10,8 @@ import {
   ExternalLink, 
   ShieldCheck, 
   UserCheck,
-  UserCog
+  UserCog,
+  LogOut
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -19,7 +20,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) => {
-  const { currentUser, commitments } = useApp();
+  const { currentUser, commitments, logout } = useApp();
 
   // Commitments counter for current user or tracking
   const userPendingCommitments = commitments.filter((c) => {
@@ -178,18 +179,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
         </div>
       </div>
 
-      {/* Footer System Info */}
-      <div className="p-4 border-t border-slate-200 bg-slate-50/50 text-[11px] text-slate-500 space-y-2">
+      {/* Footer System Info & Logout */}
+      <div className="p-4 border-t border-slate-200 bg-slate-50/50 text-[11px] text-slate-500 space-y-2.5">
         <div className="flex items-center justify-between">
           <span className="font-medium text-slate-700">Estado del Sistema</span>
           <span className="flex items-center gap-1.5 text-emerald-700 font-semibold">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-            En Línea
+            En Línea (Local)
           </span>
         </div>
-        <div className="text-[10px] text-slate-400 leading-tight">
-          Administración de Estamentos & Miembros Activa.
-        </div>
+        <button
+          onClick={() => {
+            if (confirm('¿Desea cerrar la sesión institucional activa y volver a la pantalla de ingreso?')) {
+              logout();
+            }
+          }}
+          className="flex w-full items-center justify-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-200 text-slate-700 hover:text-rose-700 font-semibold text-xs transition-all shadow-xs"
+        >
+          <LogOut className="h-3.5 w-3.5" />
+          <span>Cerrar Sesión</span>
+        </button>
       </div>
     </aside>
   );
