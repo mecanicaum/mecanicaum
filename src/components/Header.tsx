@@ -17,7 +17,8 @@ import {
   UserCheck,
   Building2,
   Lock,
-  LogOut
+  LogOut,
+  QrCode
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -240,6 +241,20 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
                   <div>
                     <p className="font-semibold text-slate-800">Importar respaldo JSON</p>
                     <p className="text-[10px] text-slate-400">Restaura la base de datos desde un archivo</p>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setCurrentTab('verificador');
+                    setShowDbMenu(false);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-blue-800 hover:bg-blue-50 font-medium border-t border-slate-100 mt-1 pt-2"
+                >
+                  <QrCode className="h-3.5 w-3.5 text-blue-600" />
+                  <div>
+                    <p className="font-semibold text-blue-900">Validador Oficial de Actas</p>
+                    <p className="text-[10px] text-blue-500">Comprobación de firmas PKI y QR</p>
                   </div>
                 </button>
 

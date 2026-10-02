@@ -19,9 +19,10 @@ import {
 
 interface LoginViewProps {
   onLoginSuccess?: () => void;
+  onOpenVerifier?: (code?: string) => void;
 }
 
-export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
+export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onOpenVerifier }) => {
   const { users, signInWithInstitutionalEmail, loginWithInstitutionalCredentials } = useApp();
 
   const [activeTab, setActiveTab] = useState<'institutional' | 'roster' | 'guest'>('institutional');
@@ -150,10 +151,20 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           </div>
         </div>
 
-        <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400">
-          <span className="inline-flex items-center gap-1 bg-slate-800/80 border border-slate-700 px-3 py-1 rounded-lg">
+        <div className="flex items-center gap-2 text-xs text-slate-400">
+          {onOpenVerifier && (
+            <button
+              onClick={() => onOpenVerifier('')}
+              className="inline-flex items-center gap-1.5 bg-blue-900/60 hover:bg-blue-800 text-blue-200 border border-blue-700/60 px-3 py-1.5 rounded-lg transition-colors font-medium shadow-xs"
+              title="Validar un acta firmada mediante código o escaneo QR"
+            >
+              <ShieldCheck className="h-3.5 w-3.5 text-blue-400" />
+              <span>Validador de Actas (QR)</span>
+            </button>
+          )}
+          <span className="hidden sm:inline-flex items-center gap-1 bg-slate-800/80 border border-slate-700 px-3 py-1.5 rounded-lg">
             <Database className="h-3.5 w-3.5 text-emerald-400" />
-            Almacenamiento Local Seguro
+            Almacenamiento Seguro
           </span>
         </div>
       </div>

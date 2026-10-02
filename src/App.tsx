@@ -10,14 +10,47 @@ import { ModuleE_Dashboard } from './components/ModuleE_Dashboard';
 import { Module_Admin } from './components/Module_Admin';
 import { ExternalGuestView } from './components/ExternalGuestView';
 import { LoginView } from './components/LoginView';
+import { PublicActVerificationView } from './components/PublicActVerificationView';
 
 const AppContent: React.FC = () => {
   const { currentUser, setActiveMeetingId, isAuthenticated } = useApp();
   const [currentTab, setCurrentTab] = useState<string>('modulo_a');
+  const [verifyCode, setVerifyCode] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('verify') || params.get('acta') || params.get('hash');
+      if (code) return code;
+      if (window.location.hash.startsWith('#verify=')) {
+        return decodeURIComponent(window.location.hash.substring(8));
+      }
+    }
+    return null;
+  });
+
+  // If viewing the public verifier (e.g. from QR code scan or URL link)
+  if (verifyCode !== null || currentTab === 'verificador') {
+    return (
+      <PublicActVerificationView
+        initialCode={verifyCode || ''}
+        onBackToApp={() => {
+          setVerifyCode(null);
+          // Remove query params cleanly from browser bar without reload
+          if (typeof window !== 'undefined' && window.history && window.history.replaceState) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+        }}
+      />
+    );
+  }
 
   // If user is not authenticated, render the dedicated institutional login portal
   if (!isAuthenticated) {
-    return <LoginView onLoginSuccess={() => setCurrentTab('modulo_a')} />;
+    return (
+      <LoginView
+        onLoginSuccess={() => setCurrentTab('modulo_a')}
+        onOpenVerifier={(code) => setVerifyCode(code || '')}
+      />
+    );
   }
 
   const handleGoToLiveMeeting = (meetingId: string) => {

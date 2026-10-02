@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Meeting, Motion, Commitment, ActQualityMapping, DigitalActSeal } from '../types';
 import { useApp } from '../context/AppContext';
+import { getActaVerificationUrl, generateQrCodeDataUrl } from '../utils/cryptoVerification';
 import { 
   Printer, 
   Download, 
@@ -26,6 +27,7 @@ interface ExportActaPdfModalProps {
   commitments: Commitment[];
   qualityMappings: ActQualityMapping[];
   onClose: () => void;
+  onOpenVerifier?: (code: string) => void;
 }
 
 export const ExportActaPdfModal: React.FC<ExportActaPdfModalProps> = ({
@@ -34,12 +36,14 @@ export const ExportActaPdfModal: React.FC<ExportActaPdfModalProps> = ({
   commitments,
   qualityMappings,
   onClose,
+  onOpenVerifier,
 }) => {
   const { getActSeal, verifyActSeal, currentUser } = useApp();
   const printContainerRef = useRef<HTMLDivElement>(null);
   const [seal, setSeal] = useState<DigitalActSeal | null>(null);
   const [loadingSeal, setLoadingSeal] = useState(true);
   const [verifying, setVerifying] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [verifyResult, setVerifyResult] = useState<{
     isValid: boolean;
     recomputedHash?: string;
@@ -47,12 +51,20 @@ export const ExportActaPdfModal: React.FC<ExportActaPdfModalProps> = ({
     errorReason?: string;
   } | null>(null);
 
+  const verificationUrl = getActaVerificationUrl(meeting.code);
+
   const meetingMotions = motions.filter((m) => m.meetingId === meeting.id);
   const meetingCommitments = commitments.filter((c) => c.meetingId === meeting.id);
   const meetingMappings = qualityMappings.filter((m) => m.meetingId === meeting.id);
 
   useEffect(() => {
     let isMounted = true;
+
+    // Generate real scannable QR code
+    generateQrCodeDataUrl(verificationUrl).then((url) => {
+      if (isMounted) setQrDataUrl(url);
+    });
+
     getActSeal(meeting.id)
       .then((res) => {
         if (isMounted) {
@@ -67,7 +79,7 @@ export const ExportActaPdfModal: React.FC<ExportActaPdfModalProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [meeting.id, getActSeal]);
+  }, [meeting.id, meeting.code, getActSeal, verificationUrl]);
 
   const handlePrint = () => {
     window.print();
@@ -117,13 +129,28 @@ export const ExportActaPdfModal: React.FC<ExportActaPdfModalProps> = ({
 
           <div className="flex items-center gap-2">
             <button
+              onClick={() => {
+                if (onOpenVerifier) {
+                  onOpenVerifier(meeting.code);
+                } else {
+                  window.open(verificationUrl, '_blank');
+                }
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-800 hover:bg-blue-100 transition-colors shadow-xs"
+              title="Abrir el portal oficial de validación de firmas PKI"
+            >
+              <ExternalLink className="h-3.5 w-3.5 text-blue-600" />
+              <span>Verificador Público</span>
+            </button>
+
+            <button
               onClick={handleVerifyServerIntegrity}
               disabled={verifying || !seal}
               className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 transition-colors shadow-xs disabled:opacity-50"
               title="Auditar firma digital y hash SHA-256 en el servidor institucional"
             >
               <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-              <span>{verifying ? 'Verificando...' : 'Auditar Integridad PKI'}</span>
+              <span>{verifying ? 'Verificando...' : 'Auditar Integridad'}</span>
             </button>
 
             <button
@@ -386,15 +413,29 @@ export const ExportActaPdfModal: React.FC<ExportActaPdfModalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center bg-slate-50 p-5 rounded-xl border border-slate-300">
               {/* QR & Verification seal */}
               <div className="md:col-span-3 flex flex-col items-center justify-center p-2 text-center border-b md:border-b-0 md:border-r border-slate-200">
-                <div className="h-20 w-20 bg-white border border-slate-300 rounded-lg flex items-center justify-center p-1 shadow-xs">
-                  <QrCode className="h-16 w-16 text-slate-900" />
+                <div className="h-24 w-24 bg-white border border-slate-300 rounded-lg flex items-center justify-center p-1.5 shadow-xs overflow-hidden">
+                  {qrDataUrl ? (
+                    <img
+                      src={qrDataUrl}
+                      alt={`QR Verificación Acta ${meeting.code}`}
+                      className="h-full w-full object-contain"
+                    />
+                  ) : (
+                    <QrCode className="h-16 w-16 text-slate-900" />
+                  )}
                 </div>
-                <span className="font-mono text-[9px] text-slate-500 mt-1 font-bold">
+                <span className="font-mono text-[9px] text-slate-500 mt-1.5 font-bold uppercase tracking-wider">
                   VALIDACIÓN PKI SHA-256
                 </span>
-                <span className="text-[8px] text-slate-400">
-                  sig-curriculo.umayor.edu.co/verify
-                </span>
+                <a
+                  href={verificationUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[9px] text-blue-700 hover:text-blue-900 hover:underline break-all font-mono max-w-[170px] text-center mt-0.5 leading-tight"
+                  title="Haga clic para validar en línea o escanee el código QR"
+                >
+                  {verificationUrl}
+                </a>
               </div>
 
               {/* Digital Certificate Details */}
