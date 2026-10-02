@@ -80,13 +80,13 @@ export const ModuleE_Dashboard: React.FC = () => {
       {/* Top Banner */}
       <div className="border-b border-slate-200 pb-5">
         <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-          Módulo E · Analítica Institucional
+          Módulo E
         </span>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 mt-0.5">
-          Dashboard e Indicadores de Rendimiento Curricular (KPIs)
+          Indicadores de desempeño y estado
         </h1>
         <p className="text-xs text-slate-600 mt-1 max-w-3xl">
-          Métricas consolidadas de comités programados vs. ejecutados, efectividad en la entrega de compromisos, semáforo de alertas institucionales y trazabilidad de autoevaluación para acreditación.
+          Resumen consolidado de comités ejecutados, cumplimiento de compromisos y alertas de seguimiento.
         </p>
       </div>
 
@@ -95,7 +95,7 @@ export const ModuleE_Dashboard: React.FC = () => {
         {/* KPI 1: % Cumplimiento de Compromisos */}
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-            <span>Cumplimiento Global</span>
+            <span>Cumplimiento global</span>
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
           </div>
           <div className="mt-3 flex items-baseline gap-2">
@@ -103,11 +103,11 @@ export const ModuleE_Dashboard: React.FC = () => {
               {commitmentComplianceRate}%
             </span>
             <span className="text-xs text-slate-500">
-              ({fulfilledCommitments} de {totalCommitments})
+              {fulfilledCommitments} de {totalCommitments}
             </span>
           </div>
           <div className="mt-2 text-[11px] text-slate-500">
-            {inReviewCommitments} en proceso de auditoría
+            {inReviewCommitments} en auditoría
           </div>
           <div className="mt-3 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
             <div
@@ -120,7 +120,7 @@ export const ModuleE_Dashboard: React.FC = () => {
         {/* KPI 2: Comités Programados vs Ejecutados */}
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-            <span>Comités Ejecutados</span>
+            <span>Comités ejecutados</span>
             <Calendar className="h-4 w-4 text-blue-600" />
           </div>
           <div className="mt-3 flex items-baseline gap-2">
@@ -128,11 +128,11 @@ export const ModuleE_Dashboard: React.FC = () => {
               {executedMeetings}/{totalMeetings}
             </span>
             <span className="text-xs text-slate-500">
-              ({meetingExecutionRate}%)
+              {meetingExecutionRate}%
             </span>
           </div>
           <div className="mt-2 text-[11px] text-slate-500">
-            {inProgressMeetings} en sesión · {scheduledMeetings} por realizar
+            {inProgressMeetings} en sesión · {scheduledMeetings} próximos
           </div>
           <div className="mt-3 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
             <div
@@ -145,7 +145,7 @@ export const ModuleE_Dashboard: React.FC = () => {
         {/* KPI 3: Semáforo de Vencidos */}
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-            <span>Compromisos Críticos</span>
+            <span>Compromisos críticos</span>
             <AlertTriangle className="h-4 w-4 text-rose-600" />
           </div>
           <div className="mt-3 flex items-baseline gap-2">
@@ -155,7 +155,7 @@ export const ModuleE_Dashboard: React.FC = () => {
             <span className="text-xs text-slate-500">vencidos</span>
           </div>
           <div className="mt-2 text-[11px] text-amber-700 font-medium">
-            {dueSoonCommitments} próximos a vencer (&lt; 7 días)
+            {dueSoonCommitments} próximos a vencer (7 días)
           </div>
           <div className="mt-3 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
             <div
@@ -168,7 +168,7 @@ export const ModuleE_Dashboard: React.FC = () => {
         {/* KPI 4: Evidencias Indexadas para Acreditación */}
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-            <span>Mapeos de Autoevaluación</span>
+            <span>Mapeos de acreditación</span>
             <Award className="h-4 w-4 text-purple-600" />
           </div>
           <div className="mt-3 flex items-baseline gap-2">
@@ -178,7 +178,7 @@ export const ModuleE_Dashboard: React.FC = () => {
             <span className="text-xs text-slate-500">acuerdos indexados</span>
           </div>
           <div className="mt-2 text-[11px] text-slate-500">
-            Acreditación CNA Colombia & ABET
+            CNA y ABET
           </div>
           <div className="mt-3 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
             <div
@@ -197,10 +197,9 @@ export const ModuleE_Dashboard: React.FC = () => {
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-slate-700" />
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                Semáforo Institucional de Alertas de Plazos
+                Alertas por estado
               </h3>
             </div>
-            <span className="text-[11px] text-slate-400">Auditoría en tiempo real</span>
           </div>
 
           <div className="space-y-3">
@@ -212,12 +211,11 @@ export const ModuleE_Dashboard: React.FC = () => {
               <div className="flex-1 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-rose-950 uppercase text-[11px]">
-                    Nivel Crítico: Compromisos Vencidos ({overdueCommitments})
+                    Crítico: {overdueCommitments} vencidos
                   </span>
-                  <span className="font-mono font-bold text-rose-800">Acción Inmediata</span>
                 </div>
                 <p className="text-rose-900 text-[11px] mt-0.5">
-                  Tareas con plazo límite rebasado sin radicación aprobada de evidencias. Requiere citación o descargo ante el Presidente del Comité.
+                  Tareas con plazo rebasado. Requiere revisión inmediata.
                 </p>
               </div>
             </div>
@@ -230,12 +228,11 @@ export const ModuleE_Dashboard: React.FC = () => {
               <div className="flex-1 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-amber-950 uppercase text-[11px]">
-                    Nivel Preventivo: Próximos a Vencer ({dueSoonCommitments})
+                    Preventivo: {dueSoonCommitments} próximos
                   </span>
-                  <span className="font-mono font-bold text-amber-800">&lt; 7 días</span>
                 </div>
                 <p className="text-amber-900 text-[11px] mt-0.5">
-                  Notificación automática remitida al correo de los responsables para carga de evidencias en Google Drive.
+                  Vencimiento en menos de 7 días. Se han notificado los responsables.
                 </p>
               </div>
             </div>
@@ -248,12 +245,11 @@ export const ModuleE_Dashboard: React.FC = () => {
               <div className="flex-1 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-emerald-950 uppercase text-[11px]">
-                    Nivel Conforme: Cumplidos & En Plazo ({fulfilledCommitments + pendingCommitments - overdueCommitments})
+                    En regla: {fulfilledCommitments + pendingCommitments - overdueCommitments} cumplidos
                   </span>
-                  <span className="font-mono font-bold text-emerald-800">Normal</span>
                 </div>
                 <p className="text-emerald-900 text-[11px] mt-0.5">
-                  Compromisos validados por el Encargado de Seguimiento con constancia documental en el repositorio.
+                  Compromisos validados con evidencia documentada.
                 </p>
               </div>
             </div>
@@ -266,16 +262,15 @@ export const ModuleE_Dashboard: React.FC = () => {
             <div className="flex items-center gap-2">
               <Award className="h-4 w-4 text-purple-700" />
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                Evidencias Curriculares por Factor CNA / ABET
+                Evidencias por factor
               </h3>
             </div>
-            <span className="text-[11px] text-slate-400">Distribución</span>
           </div>
 
           <div className="space-y-3">
             {Object.keys(factorDistribution).length === 0 ? (
               <p className="text-xs text-slate-400 italic py-4 text-center">
-                Sin mapeos registrados aún.
+                Sin mapeos registrados aún
               </p>
             ) : (
               Object.entries(factorDistribution).map(([fCode, count]) => {
@@ -289,7 +284,7 @@ export const ModuleE_Dashboard: React.FC = () => {
                         Factor {fCode}
                       </span>
                       <span className="font-mono font-bold text-slate-600">
-                        {count} evidencias ({Math.round((count / qualityMappings.length) * 100)}%)
+                        {count} ({Math.round((count / qualityMappings.length) * 100)}%)
                       </span>
                     </div>
                     <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
@@ -312,11 +307,11 @@ export const ModuleE_Dashboard: React.FC = () => {
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-slate-700" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-              Rendimiento y Tasa de Cumplimiento por Integrante / Invitado
+              Rendimiento por responsable
             </h3>
           </div>
           <span className="text-[11px] text-slate-500 font-mono">
-            {performanceByUser.length} responsables evaluados
+            {performanceByUser.length} evaluados
           </span>
         </div>
 
@@ -325,18 +320,18 @@ export const ModuleE_Dashboard: React.FC = () => {
             <thead className="border-b border-slate-200 bg-slate-100/60 text-slate-700 font-semibold">
               <tr>
                 <th className="py-2.5 px-4">Responsable</th>
-                <th className="py-2.5 px-4">Rol en el Comité</th>
-                <th className="py-2.5 px-4 text-center">Total Asignados</th>
+                <th className="py-2.5 px-4">Rol</th>
+                <th className="py-2.5 px-4 text-center">Total</th>
                 <th className="py-2.5 px-4 text-center">Cumplidos</th>
                 <th className="py-2.5 px-4 text-center">Vencidos</th>
-                <th className="py-2.5 px-4 text-right">Efectividad (%)</th>
+                <th className="py-2.5 px-4 text-right">Efectividad</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {performanceByUser.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-xs text-slate-400">
-                    Aún no se registran compromisos asignados para calcular métricas de rendimiento por integrante.
+                    Sin datos de rendimiento aún
                   </td>
                 </tr>
               ) : (
@@ -346,37 +341,37 @@ export const ModuleE_Dashboard: React.FC = () => {
                       {row.user.name}
                       {row.user.isExternal && (
                         <span className="ml-1.5 text-[9px] font-mono text-slate-500 bg-slate-100 px-1 py-0.5 rounded">
-                          Externo
+                          Ext.
                         </span>
                       )}
                     </td>
-                  <td className="py-3 px-4 text-slate-500 text-[11px]">
-                    {row.user.roleLabel}
-                  </td>
-                  <td className="py-3 px-4 text-center font-mono font-medium text-slate-700">
-                    {row.total}
-                  </td>
-                  <td className="py-3 px-4 text-center font-mono font-semibold text-emerald-700">
-                    {row.completed}
-                  </td>
-                  <td className="py-3 px-4 text-center font-mono font-semibold text-rose-600">
-                    {row.overdue}
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <span
-                      className={`font-mono font-bold ${
-                        row.rate >= 80
-                          ? 'text-emerald-700'
-                          : row.rate >= 50
-                          ? 'text-amber-700'
-                          : 'text-rose-600'
-                      }`}
-                    >
-                      {row.rate}%
-                    </span>
-                  </td>
-                </tr>
-              )))}
+                    <td className="py-3 px-4 text-slate-500 text-[11px]">
+                      {row.user.roleLabel}
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono font-medium text-slate-700">
+                      {row.total}
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono font-semibold text-emerald-700">
+                      {row.completed}
+                    </td>
+                    <td className="py-3 px-4 text-center font-mono font-semibold text-rose-600">
+                      {row.overdue}
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <span
+                        className={`font-mono font-bold ${
+                          row.rate >= 80
+                            ? 'text-emerald-700'
+                            : row.rate >= 50
+                            ? 'text-amber-700'
+                            : 'text-rose-600'
+                        }`}
+                      >
+                        {row.rate}%
+                      </span>
+                    </td>
+                  </tr>
+                )))}
             </tbody>
           </table>
         </div>
