@@ -416,6 +416,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setApiUserId(activeUser.id);
     realtime.identify(activeUser.id);
     setIsAuthenticated(true);
+    try {
+      localStorage.setItem('sigc_storage_v2_is_authenticated', 'true');
+    } catch {}
 
     try {
       await api.loginGoogleSSO(session.email, session.name);
@@ -432,14 +435,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
-  const signOutGoogle = async () => {
-    await logoutInstitutional();
+  const logout = () => {
+    // 1. Terminate institutional authentication session
+    logoutInstitutional();
+
+    // 2. Clear user state and reset to roster baseline
     setGoogleUser(null);
     setIsAuthenticated(false);
+    if (users.length > 0) {
+      setCurrentUser(users[0]);
+      setApiUserId(users[0].id);
+    }
+
+    // 3. Purge authentication tokens and flags from browser storage
+    try {
+      localStorage.setItem('sigc_storage_v2_is_authenticated', 'false');
+      localStorage.removeItem('sigc_storage_v2_session_user');
+      localStorage.removeItem('sigc_institutional_session_v1');
+      localStorage.removeItem('sigc_state_currentUserId');
+    } catch (err) {
+      console.warn('[AppContext] Storage cleanup on logout:', err);
+    }
   };
 
-  const logout = () => {
-    signOutGoogle();
+  const signOutGoogle = async () => {
+    logout();
   };
 
   // User Management

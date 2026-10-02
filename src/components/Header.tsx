@@ -16,7 +16,8 @@ import {
   Upload,
   UserCheck,
   Building2,
-  Lock
+  Lock,
+  LogOut
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -37,7 +38,8 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
     isLiveSyncConnected,
     googleUser,
     signInWithInstitutionalEmail,
-    signOutGoogle
+    signOutGoogle,
+    logout
   } = useApp();
 
   const [showRoleSelector, setShowRoleSelector] = useState(false);
@@ -345,7 +347,17 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
                 })}
               </div>
 
-              <div className="pt-2 mt-1 border-t border-slate-100 flex justify-end">
+              <div className="pt-2 mt-1 border-t border-slate-100 flex items-center justify-between">
+                <button
+                  onClick={() => {
+                    logout();
+                    setShowRoleSelector(false);
+                  }}
+                  className="text-[11px] text-rose-700 font-bold hover:underline flex items-center gap-1 px-1 py-0.5"
+                >
+                  <LogOut className="h-3 w-3" />
+                  Cerrar Sesión
+                </button>
                 <button
                   onClick={() => {
                     setCurrentTab('modulo_admin');
@@ -353,12 +365,22 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
                   }}
                   className="text-[11px] text-blue-700 font-semibold hover:underline flex items-center gap-1 px-1 py-0.5"
                 >
-                  + Administrar Miembros, Roles & Estamentos
+                  + Administrar
                 </button>
               </div>
             </div>
           )}
         </div>
+
+        {/* Header Direct Logout Button */}
+        <button
+          onClick={() => logout()}
+          className="flex h-8 items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 hover:border-rose-300 transition-colors shadow-xs"
+          title="Cerrar sesión institucional y volver al portal de ingreso"
+        >
+          <LogOut className="h-3.5 w-3.5 text-rose-600" />
+          <span className="hidden sm:inline">Cerrar Sesión</span>
+        </button>
 
         {/* Notifications Popover */}
         <div className="relative">

@@ -189,14 +189,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
           </span>
         </div>
         <button
-          onClick={() => {
-            if (confirm('¿Desea cerrar la sesión institucional activa y volver a la pantalla de ingreso?')) {
-              logout();
-            }
-          }}
-          className="flex w-full items-center justify-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-200 text-slate-700 hover:text-rose-700 font-semibold text-xs transition-all shadow-xs"
+          onClick={() => logout()}
+          className="flex w-full items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-800 font-bold text-xs transition-all shadow-xs"
+          title="Cerrar sesión institucional y volver al portal de ingreso"
         >
-          <LogOut className="h-3.5 w-3.5" />
+          <LogOut className="h-4 w-4 text-rose-600" />
           <span>Cerrar Sesión</span>
         </button>
       </div>
