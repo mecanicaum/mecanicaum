@@ -146,7 +146,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
               </span>
             </div>
             <p className="text-[11px] text-slate-500 truncate max-w-xs sm:max-w-md">
-              Facultad de Ingeniería · Universidad Mayor · Acreditación CNA / ABET
+              Facultad de Ingeniería · Institución Universitaria Mayor de Cartagena · Acreditación CNA / ABET
             </p>
           </div>
         </div>

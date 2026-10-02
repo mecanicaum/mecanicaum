@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { Meeting, Motion, Commitment, User, DigitalActSeal } from './types';
 
-const AUTHORITY_ISSUER = 'Universidad Mayor - Dirección de Autoevaluación y Calidad Académica - Autoridad de Certificación SIG-Currículo PKI v2.4';
+const AUTHORITY_ISSUER = 'Institución Universitaria Mayor de Cartagena - Dirección de Autoevaluación y Calidad Académica - Autoridad de Certificación SIG-Currículo PKI v2.4';
 
 /**
  * Computes standard SHA-256 hash in hexadecimal representation (No secret keys required)

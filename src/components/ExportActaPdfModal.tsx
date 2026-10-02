@@ -178,7 +178,7 @@ export const ExportActaPdfModal: React.FC<ExportActaPdfModalProps> = ({
 
             <div className="py-2">
               <h1 className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-950 uppercase">
-                Universidad Mayor · Facultad de Ingeniería
+                Institución Universitaria Mayor de Cartagena · Facultad de Ingeniería
               </h1>
               <h2 className="text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-wide">
                 Departamento de Ingeniería Mecánica · Comité Curricular
@@ -408,7 +408,7 @@ export const ExportActaPdfModal: React.FC<ExportActaPdfModalProps> = ({
                   <div>
                     <span className="text-slate-400">Firmante y Autoridad Emisora:</span>
                     <p className="font-bold text-slate-900">{signerNameDisplay}</p>
-                    <p className="text-[10px] text-slate-500">{signerRoleDisplay} · Universidad Mayor</p>
+                    <p className="text-[10px] text-slate-500">{signerRoleDisplay} · Institución Universitaria Mayor de Cartagena</p>
                   </div>
                   <div>
                     <span className="text-slate-400">Estampa Temporal del Servidor (UTC):</span>
@@ -443,7 +443,7 @@ export const ExportActaPdfModal: React.FC<ExportActaPdfModalProps> = ({
             </div>
 
             <div className="text-center text-[10px] text-slate-400 pt-4 border-t border-slate-200 leading-relaxed">
-              Documento expedido y refrendado electrónicamente bajo el Acuerdo del Consejo Superior de la Universidad Mayor. Cumple con la Ley 527 de 1999 sobre firmas digitales y validez probatoria plena ante el Consejo Nacional de Acreditación (CNA) y pares evaluadores ABET.
+              Documento expedido y refrendado electrónicamente bajo el Acuerdo del Consejo Superior de la Institución Universitaria Mayor de Cartagena. Cumple con la Ley 527 de 1999 sobre firmas digitales y validez probatoria plena ante el Consejo Nacional de Acreditación (CNA) y pares evaluadores ABET.
             </div>
           </div>
         </div>

@@ -120,7 +120,7 @@ https://drive.google.com/drive/folders/umayor-evidencias-comite-curriculo
 Atentamente,
 Secretaría de Seguimiento y Control
 Comité Curricular de Ingeniería
-Universidad Mayor
+Institución Universitaria Mayor de Cartagena
 `;
 
     setAlertSubject(subject);

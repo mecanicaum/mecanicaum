@@ -45,7 +45,7 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   soundNotificationsEnabled: false,
   compactTableMode: false,
   activeAcademicPeriod: '2026-1',
-  institutionName: 'Facultad de Ingeniería · Universidad Mayor',
+  institutionName: 'Facultad de Ingeniería · Institución Universitaria Mayor de Cartagena',
 };
 
 const DEFAULT_NOTIFICATIONS: InstitutionalNotification[] = [
@@ -746,7 +746,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       signedBy: currentUser.name,
       signerEmail: currentUser.email,
       signerRole: currentUser.role,
-      authorityIssuer: 'Universidad Mayor - Dirección de Autoevaluación y Calidad Académica',
+      authorityIssuer: 'Institución Universitaria Mayor de Cartagena - Dirección de Autoevaluación y Calidad Académica',
       canonicalPayload: JSON.stringify({ meeting, notes }),
       totalVoters: meeting.attendees.filter((a) => a.present).length,
       totalAgreements: meeting.agendaItems.filter((a) => a.agreements).length,

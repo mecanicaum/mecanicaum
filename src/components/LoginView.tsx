@@ -145,7 +145,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               </span>
             </div>
             <p className="text-xs text-slate-400 font-medium">
-              Comité Curricular de Ingeniería Mecánica · Universidad Mayor
+              Comité Curricular de Ingeniería Mecánica · Institución Universitaria Mayor de Cartagena
             </p>
           </div>
         </div>
@@ -317,7 +317,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   <span>Autenticación Institucional Segura:</span>
                 </div>
                 <p className="text-slate-500">
-                  Ingrese con sus credenciales oficiales de la Universidad Mayor. En caso de olvido o bloqueo temporal por intentos fallidos, comuníquese con la Presidencia del Comité Curricular o la Dirección de Autoevaluación y Calidad.
+                  Ingrese con sus credenciales oficiales de la Institución Universitaria Mayor de Cartagena. En caso de olvido o bloqueo temporal por intentos fallidos, comuníquese con la Presidencia del Comité Curricular o la Dirección de Autoevaluación y Calidad.
                 </p>
               </div>
 
@@ -415,7 +415,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
               Seguridad Institucional Activa
             </span>
-            <span>Universidad Mayor · 2026</span>
+            <span>Institución Universitaria Mayor de Cartagena · 2026</span>
           </div>
         </div>
       </div>
