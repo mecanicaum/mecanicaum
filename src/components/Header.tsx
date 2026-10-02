@@ -152,16 +152,9 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
         </div>
       </div>
 
-      {/* Zone 2: Realtime & Offline-First Storage Indicator */}
+      {/* Zone 2: Context */}
       <div className="hidden lg:flex items-center gap-3 text-xs font-medium text-slate-600">
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200">
-          <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
-          <span className="text-[11px] font-mono text-slate-700">
-            Almacenamiento Local Seguro (IndexedDB)
-          </span>
-        </div>
-        <span className="text-slate-300">|</span>
-        <span className="text-slate-400">Módulo:</span>
+        <span className="text-slate-400">Vista:</span>
         <span className="capitalize text-slate-900 font-semibold bg-slate-100 px-2.5 py-1 rounded">
           {currentTab.replace('_', ' ')}
         </span>
@@ -186,17 +179,17 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
               className="text-slate-400 hover:text-slate-700 p-0.5 ml-1 text-xs font-bold"
               title="Cerrar sesión institucional"
             >
-              ✕
+              <X className="h-3 w-3" />
             </button>
           </div>
         ) : (
           <button
             onClick={() => setShowSsoModal(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50/80 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-blue-800 hover:bg-blue-100 transition-colors shadow-xs"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50/80 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-blue-800 hover:bg-blue-100 transition-colors"
             title="Iniciar sesión institucional"
           >
             <UserCheck className="h-3.5 w-3.5 text-blue-700" />
-            <span className="hidden sm:inline">Acceso Institucional</span>
+            <span className="hidden sm:inline">Acceso institucional</span>
             <span className="sm:hidden">SSO</span>
           </button>
         )}
@@ -206,10 +199,10 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
           <button
             onClick={() => setShowDbMenu(!showDbMenu)}
             className="flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-xs font-medium text-slate-700 hover:bg-slate-100 transition-colors"
-            title="Gestión de almacenamiento IndexedDB y respaldos JSON"
+            title="Gestión de respaldos y almacenamiento local"
           >
             <Database className="h-3.5 w-3.5 text-slate-600" />
-            <span className="hidden md:inline">Base de Datos</span>
+            <span className="hidden md:inline">Base de datos</span>
             <ChevronDown className="h-3 w-3 text-slate-400" />
           </button>
 
@@ -217,10 +210,10 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
             <div className="absolute right-0 mt-2 w-72 rounded-xl border border-slate-200 bg-white p-2 shadow-xl ring-1 ring-slate-950/5 z-50">
               <div className="px-2 py-1.5 border-b border-slate-100 mb-1">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                  Almacenamiento IndexedDB
+                  Almacenamiento local
                 </p>
                 <p className="text-xs text-slate-500">
-                  Operación local sin claves externas ni dependencias remotas:
+                  Copias y restauración de datos del sistema.
                 </p>
               </div>
 
@@ -234,8 +227,8 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
                 >
                   <Download className="h-3.5 w-3.5 text-blue-600" />
                   <div>
-                    <p className="font-semibold text-slate-800">Exportar Respaldo JSON</p>
-                    <p className="text-[10px] text-slate-400">Descarga todas las actas, votos y compromisos</p>
+                    <p className="font-semibold text-slate-800">Exportar respaldo JSON</p>
+                    <p className="text-[10px] text-slate-400">Descarga actas, votos y compromisos</p>
                   </div>
                 </button>
 
@@ -245,7 +238,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
                 >
                   <Upload className="h-3.5 w-3.5 text-emerald-600" />
                   <div>
-                    <p className="font-semibold text-slate-800">Importar Respaldo JSON</p>
+                    <p className="font-semibold text-slate-800">Importar respaldo JSON</p>
                     <p className="text-[10px] text-slate-400">Restaura la base de datos desde un archivo</p>
                   </div>
                 </button>
@@ -261,7 +254,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
                 >
                   <RotateCcw className="h-3.5 w-3.5 text-rose-600" />
                   <div>
-                    <p className="font-semibold">Restablecer Datos Iniciales</p>
+                    <p className="font-semibold">Restablecer datos</p>
                     <p className="text-[10px] text-rose-400">Reinicia todas las tablas a valores por defecto</p>
                   </div>
                 </button>
@@ -282,7 +275,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
         <div className="relative">
           <button
             onClick={() => setShowRoleSelector(!showRoleSelector)}
-            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-left text-xs hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400"
+            className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-left text-xs hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             title="Cambiar entre los roles RBAC institucionales"
           >
             <div className="flex h-6 w-6 items-center justify-center rounded bg-slate-800 text-[10px] font-bold text-white">
@@ -303,11 +296,11 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
             <div className="absolute right-0 mt-2 w-80 rounded-xl border border-slate-200 bg-white p-2 shadow-xl ring-1 ring-slate-950/5 z-50">
               <div className="px-2 py-1.5 border-b border-slate-100 mb-1">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                  {currentUser.role === 'super_admin' ? 'Simular Perfil / Administrador' : 'Perfil Institucional'}
+                  {currentUser.role === 'super_admin' ? 'Simular perfil' : 'Perfil institucional'}
                 </p>
                 <p className="text-xs text-slate-500">
                   {currentUser.role === 'super_admin'
-                    ? 'Seleccione un perfil para validar los permisos y flujos del sistema:'
+                    ? 'Seleccione un perfil para validar permisos del sistema:'
                     : `${currentUser.name} (${currentUser.email})`}
                 </p>
               </div>
@@ -375,7 +368,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
                   className="text-[11px] text-rose-700 font-bold hover:underline flex items-center gap-1 px-1 py-0.5"
                 >
                   <LogOut className="h-3 w-3" />
-                  Cerrar Sesión
+                  Cerrar sesión
                 </button>
                 <button
                   onClick={() => {
@@ -384,7 +377,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
                   }}
                   className="text-[11px] text-blue-700 font-semibold hover:underline flex items-center gap-1 px-1 py-0.5"
                 >
-                  + Administrar
+                  Configuración
                 </button>
               </div>
             </div>
@@ -394,11 +387,11 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
         {/* Header Direct Logout Button */}
         <button
           onClick={() => logout()}
-          className="flex h-8 items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 hover:border-rose-300 transition-colors shadow-xs"
+          className="flex h-8 items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 hover:border-rose-300 transition-colors"
           title="Cerrar sesión institucional y volver al portal de ingreso"
         >
           <LogOut className="h-3.5 w-3.5 text-rose-600" />
-          <span className="hidden sm:inline">Cerrar Sesión</span>
+          <span className="hidden sm:inline">Cerrar sesión</span>
         </button>
 
         {/* Notifications Popover */}
@@ -406,7 +399,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
           <button
             onClick={() => setShowNotifications(!showNotifications)}
             className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-            title="Bandeja de notificaciones y citaciones institucionales"
+            title="Bandeja de notificaciones"
           >
             <Bell className="h-4 w-4" />
             {unreadCount > 0 && (
@@ -421,7 +414,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
               <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold text-slate-900">
-                    Citaciones y Notificaciones Oficiales
+                    Notificaciones
                   </span>
                   {unreadCount > 0 && (
                     <span className="rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-medium text-rose-800">
@@ -440,7 +433,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
               <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 p-1">
                 {userNotifications.length === 0 ? (
                   <div className="py-6 text-center text-xs text-slate-400">
-                    No tiene notificaciones pendientes.
+                    No hay notificaciones.
                   </div>
                 ) : (
                   userNotifications.map((notif) => (
@@ -493,8 +486,8 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
                   <Building2 className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">Acceso Institucional</h3>
-                  <p className="text-[11px] text-slate-500">Autenticación local para docentes y directivos</p>
+                  <h3 className="text-sm font-bold text-slate-900">Acceso institucional</h3>
+                  <p className="text-[11px] text-slate-500">Ingreso seguro para docentes y directivos</p>
                 </div>
               </div>
               <button
@@ -508,7 +501,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
             {/* Quick Profile Selection */}
             <div className="mt-4">
               <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-2">
-                Ingreso Rápido con Padrón del Comité:
+                Acceso rápido
               </label>
               <div className="grid grid-cols-1 gap-1.5 max-h-40 overflow-y-auto pr-1">
                 {users.slice(0, 5).map((u) => (
@@ -542,7 +535,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
                 <div className="w-full border-t border-slate-200"></div>
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="bg-white px-2 text-slate-400 font-medium">o ingrese con correo institucional</span>
+                <span className="bg-white px-2 text-slate-400 font-medium">o use su correo institucional</span>
               </div>
             </div>
 
@@ -550,7 +543,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
             <form onSubmit={handleInstitutionalLogin} className="space-y-3">
               <div>
                 <label className="text-xs font-semibold text-slate-700 block mb-1">
-                  Correo Electrónico Institucional
+                  Correo institucional
                 </label>
                 <input
                   type="email"
@@ -564,7 +557,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
 
               <div>
                 <label className="text-xs font-semibold text-slate-700 block mb-1">
-                  Nombre Completo (Opcional)
+                  Nombre (opcional)
                 </label>
                 <input
                   type="text"
@@ -588,7 +581,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
                   disabled={isLoggingIn || !customEmail}
                   className="w-2/3 rounded-lg bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800 disabled:opacity-50 shadow-xs"
                 >
-                  {isLoggingIn ? 'Autenticando...' : 'Ingresar al Sistema'}
+                  {isLoggingIn ? 'Autenticando...' : 'Ingresar'}
                 </button>
               </div>
             </form>
