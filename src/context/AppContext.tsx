@@ -19,7 +19,27 @@ import {
   CustomRole,
   DigitalActSeal,
   UserSettings,
+  BrandingConfig,
 } from '../types';
+
+export const DEFAULT_BRANDING_CONFIG: BrandingConfig = {
+  logoType: 'default',
+  customLogoUrl: '',
+  institutionName: 'INSTITUCIÓN UNIVERSITARIA',
+  facultyOrLocationName: 'MAYOR DE CARTAGENA',
+  bannerType: 'dynamic',
+  bannerImageUrl: '',
+  bannerSloganPrefix: 'LA CALIDAD, UN C',
+  bannerSloganWord: 'OMPR',
+  bannerSloganSuffix: 'OMISO',
+  bannerScriptWord: 'permanente',
+  bannerSubtitle: 'FACULTAD DE INGENIERÍA · CONSEJO CURRICULAR DE INGENIERÍA MECÁNICA',
+  showQualitySeal: true,
+  accentColor: '#006837',
+  goldColor: '#E58A13',
+  updatedAt: new Date().toISOString(),
+  updatedBy: 'Sistema Oficial UMAYOR',
+};
 import {
   INITIAL_USERS,
   INITIAL_ESTAMENTOS,
@@ -155,6 +175,11 @@ interface AppContextType {
   userSettings: UserSettings;
   updateUserSettings: (updates: Partial<UserSettings>) => void;
 
+  // Institutional Branding & Slogan (Restricted Exclusively to Super Admin)
+  brandingConfig: BrandingConfig;
+  updateBrandingConfig: (updates: Partial<BrandingConfig>) => Promise<void>;
+  resetBrandingConfig: () => Promise<void>;
+
   // Browser Database Storage Operations (IndexedDB / LocalStorage Sync)
   exportDatabaseBackup: () => Promise<void>;
   importDatabaseBackup: (backupJson: string) => Promise<void>;
@@ -185,6 +210,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [googleUser, setGoogleUser] = useLocalStorage<{ email: string; name: string; photoURL?: string | null } | null>('session_user', null);
   const [isAuthenticated, setIsAuthenticated] = useLocalStorage<boolean>('is_authenticated', false);
   const [userSettings, setUserSettings] = useLocalStorage<UserSettings>('user_settings', DEFAULT_USER_SETTINGS);
+  const [brandingConfig, setBrandingConfig] = useLocalStorage<BrandingConfig>('sigc_branding_config_v2', DEFAULT_BRANDING_CONFIG);
 
   const [isLiveSyncConnected, setIsLiveSyncConnected] = useState<boolean>(false);
 
@@ -377,6 +403,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUserSettings((prev) => ({ ...prev, ...updates }));
   };
 
+  // Branding Configuration (Strictly restricted to Super Administrator)
+  const updateBrandingConfig = async (updates: Partial<BrandingConfig>): Promise<void> => {
+    if (currentUser.role !== 'super_admin') {
+      throw new Error('Operación no autorizada: Solo el Super Administrador institucional tiene facultades para modificar los activos de marca y el banner de inicio.');
+    }
+
+    const updated: BrandingConfig = {
+      ...brandingConfig,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+      updatedBy: `${currentUser.name} (${currentUser.email})`,
+    };
+
+    setBrandingConfig(updated);
+  };
+
+  const resetBrandingConfig = async (): Promise<void> => {
+    if (currentUser.role !== 'super_admin') {
+      throw new Error('Operación no autorizada: Solo el Super Administrador institucional puede restablecer los activos de marca.');
+    }
+
+    const resetConfig: BrandingConfig = {
+      ...DEFAULT_BRANDING_CONFIG,
+      updatedAt: new Date().toISOString(),
+      updatedBy: `Restablecido por Super Admin: ${currentUser.name}`,
+    };
+
+    setBrandingConfig(resetConfig);
+  };
+
   // Institutional Single Sign-On
   const signInWithInstitutionalEmail = async (
     email: string,
@@ -494,25 +550,85 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const logout = () => {
-    // 1. Terminate institutional authentication session
+    // 1. Terminate institutional authentication session in services
     logoutInstitutional();
     setApiToken('');
 
-    // 2. Clear user state and reset to roster baseline
+    // 2. Clear in-memory user state and force unauthenticated state
     setGoogleUser(null);
     setIsAuthenticated(false);
-    if (users.length > 0) {
-      setCurrentUser(users[0]);
-      setApiUserId(users[0].id);
-    }
 
-    // 3. Purge authentication tokens and flags from browser storage
+    // 3. Purge all session-related keys, credentials, and cached objects from localStorage and sessionStorage
     try {
-      localStorage.setItem('sigc_storage_v2_is_authenticated', 'false');
-      localStorage.removeItem('sigc_storage_v2_session_user');
-      localStorage.removeItem('sigc_institutional_session_v1');
-      localStorage.removeItem('sigc_state_currentUserId');
-      localStorage.removeItem('sigc_auth_token');
+      // Clear entire sessionStorage immediately
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        window.sessionStorage.clear();
+      }
+
+      if (typeof window !== 'undefined' && window.localStorage) {
+        // Explicit list of known authentication, session, and credential keys
+        const sensitiveKeys = [
+          'sigc_storage_v2_is_authenticated',
+          'sigc_storage_v2_session_user',
+          'sigc_institutional_session_v1',
+          'sigc_state_currentUserId',
+          'sigc_auth_token',
+          'sigc_remembered_email',
+          'sigc_user_credentials',
+          'sigc_padron_miembros',
+          'sigc_roster_credentials',
+          'sigc_cached_roster',
+          'sigc_cached_members',
+          'sigc_member_credentials',
+          'sigc_active_member_session',
+          'sigc_super_admin_pin',
+          'sigc_login_bypass',
+          'sigc_guest_token',
+          'session_user',
+          'is_authenticated',
+        ];
+
+        sensitiveKeys.forEach((key) => {
+          window.localStorage.removeItem(key);
+        });
+
+        // Scan and purge any remaining keys matching session, auth, padron, credential, or token patterns
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < window.localStorage.length; i++) {
+          const key = window.localStorage.key(i);
+          if (key) {
+            const lowerKey = key.toLowerCase();
+            if (
+              lowerKey.includes('padron') ||
+              lowerKey.includes('roster') ||
+              lowerKey.includes('credential') ||
+              lowerKey.includes('auth_token') ||
+              lowerKey.includes('session_user') ||
+              lowerKey.includes('remembered') ||
+              lowerKey.includes('login_draft') ||
+              (lowerKey.startsWith('sigc_') && (lowerKey.includes('auth') || lowerKey.includes('session') || lowerKey.includes('user')))
+            ) {
+              // Ensure we preserve essential organizational data (meetings, branding, settings, commitments, estamentos, custom roles)
+              if (
+                !lowerKey.includes('meetings') &&
+                !lowerKey.includes('branding') &&
+                !lowerKey.includes('settings') &&
+                !lowerKey.includes('quality') &&
+                !lowerKey.includes('commitments') &&
+                !lowerKey.includes('estamentos') &&
+                !lowerKey.includes('custom_roles')
+              ) {
+                keysToRemove.push(key);
+              }
+            }
+          }
+        }
+
+        keysToRemove.forEach((k) => window.localStorage.removeItem(k));
+
+        // Explicitly set unauthenticated flag to prevent auto-login on reload
+        window.localStorage.setItem('sigc_storage_v2_is_authenticated', 'false');
+      }
     } catch (err) {
       console.warn('[AppContext] Storage cleanup on logout:', err);
     }
@@ -1384,6 +1500,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addNotification,
         userSettings,
         updateUserSettings,
+        brandingConfig,
+        updateBrandingConfig,
+        resetBrandingConfig,
         exportDatabaseBackup,
         importDatabaseBackup,
         resetDatabaseToDefaults,

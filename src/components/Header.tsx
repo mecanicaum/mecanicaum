@@ -130,31 +130,23 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-[#C49E2D]/40 bg-[#006A4E] text-white px-4 sm:px-6 shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-[#E59800]/40 bg-[#006837] text-white px-4 sm:px-6 shadow-[0_4px_12px_rgba(0,104,55,0.15)]">
       {/* Zone 1: Institutional Logo & Faculty Identity */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-3">
-          <UmayorLogo size="md" variant="full" className="bg-[#00523E] px-2.5 py-1 rounded-md border border-[#C49E2D]/30" />
-          <div className="hidden sm:block border-l border-[#C49E2D]/30 pl-3">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-cinzel font-bold tracking-tight text-white">
-                SIG-CURRÍCULO
-              </span>
-              <span className="hidden md:inline-flex items-center text-[9px] font-bold bg-[#C49E2D] text-[#006A4E] px-2 py-0.5 rounded-md font-mono uppercase tracking-wider">
-                CNA / ABET
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-200 truncate max-w-xs sm:max-w-md font-sans">
-              Comité Curricular · Facultad de Ingeniería
-            </p>
+          <UmayorLogo size="md" variant="badge" showSubtext={true} />
+          <div className="hidden lg:block border-l border-white/20 pl-3">
+            <span className="text-[10px] bg-[#E59800] text-[#006837] px-2 py-0.5 rounded-md font-heading font-extrabold uppercase tracking-wider block w-fit shadow-xs">
+              Acreditación CNA / ABET
+            </span>
           </div>
         </div>
       </div>
 
       {/* Zone 2: Context */}
-      <div className="hidden lg:flex items-center gap-2 text-xs font-medium text-slate-200">
-        <span className="text-[#C49E2D] font-bold uppercase tracking-wider text-[10px]">Módulo:</span>
-        <span className="capitalize text-white font-semibold bg-[#00523E] px-2.5 py-1 rounded-md border border-[#C49E2D]/30">
+      <div className="hidden lg:flex items-center gap-2 text-xs font-medium text-slate-100">
+        <span className="text-[#E59800] font-heading font-bold uppercase tracking-wider text-[10px]">Módulo:</span>
+        <span className="capitalize text-white font-semibold bg-[#004D25] px-2.5 py-1 rounded-md border border-[#E59800]/30 shadow-2xs">
           {currentTab.replace('_', ' ')}
         </span>
       </div>
@@ -163,12 +155,12 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
       <div className="flex items-center gap-2 sm:gap-2.5">
         {/* Institutional Single Sign-On Button / Connected Badge */}
         {googleUser ? (
-          <div className="flex items-center gap-1.5 bg-[#00523E] border border-[#C49E2D]/40 px-2.5 py-1 rounded-md text-xs text-white">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#C49E2D] text-[10px] font-bold text-[#006A4E]">
+          <div className="flex items-center gap-1.5 bg-[#004D25] border border-[#E59800]/40 px-2.5 py-1 rounded-md text-xs text-white">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#E59800] text-[10px] font-bold text-[#006837]">
               {googleUser.name.slice(0, 1)}
             </span>
             <div className="hidden sm:block text-left">
-              <span className="text-[10px] font-bold text-[#C49E2D] block leading-none">SSO Activo</span>
+              <span className="text-[10px] font-bold text-[#E59800] block leading-none">SSO Activo</span>
               <span className="text-[9px] text-slate-200 font-mono block leading-tight truncate max-w-[120px]">
                 {googleUser.email}
               </span>
@@ -184,10 +176,10 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
         ) : (
           <button
             onClick={() => setShowSsoModal(true)}
-            className="inline-flex items-center gap-1.5 rounded-md border border-[#C49E2D]/50 bg-[#00523E] px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#C49E2D] hover:text-[#006A4E] transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-md border border-[#E59800]/50 bg-[#004D25] px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#E59800] hover:text-[#006837] transition-colors cursor-pointer"
             title="Iniciar sesión institucional"
           >
-            <UserCheck className="h-3.5 w-3.5 text-[#C49E2D]" />
+            <UserCheck className="h-3.5 w-3.5 text-[#E59800]" />
             <span className="hidden sm:inline">Acceso institucional</span>
             <span className="sm:hidden">SSO</span>
           </button>
@@ -197,12 +189,12 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
         <div className="relative">
           <button
             onClick={() => setShowDbMenu(!showDbMenu)}
-            className="flex h-8 items-center gap-1.5 rounded-md border border-[#C49E2D]/40 bg-[#00523E] px-2.5 text-xs font-medium text-white hover:bg-[#00523E]/80 transition-colors cursor-pointer"
+            className="flex h-8 items-center gap-1.5 rounded-md border border-[#E59800]/40 bg-[#004D25] px-2.5 text-xs font-medium text-white hover:bg-[#004D25]/80 transition-colors cursor-pointer"
             title="Gestión de respaldos y almacenamiento local"
           >
-            <Database className="h-3.5 w-3.5 text-[#C49E2D]" />
+            <Database className="h-3.5 w-3.5 text-[#E59800]" />
             <span className="hidden md:inline">Base de datos</span>
-            <ChevronDown className="h-3 w-3 text-slate-300" />
+            <ChevronDown className="h-3 w-3 text-slate-200" />
           </button>
 
           {showDbMenu && (
@@ -288,21 +280,21 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
         <div className="relative">
           <button
             onClick={() => setShowRoleSelector(!showRoleSelector)}
-            className="flex items-center gap-2 rounded-md border border-[#C49E2D]/40 bg-[#00523E] px-2.5 py-1 text-left text-xs text-white hover:bg-[#00523E]/80 transition-colors focus:outline-none focus:ring-2 focus:ring-[#C49E2D] cursor-pointer"
+            className="flex items-center gap-2 rounded-md border border-[#E59800]/40 bg-[#004D25] px-2.5 py-1 text-left text-xs text-white hover:bg-[#004D25]/80 transition-colors focus:outline-none focus:ring-2 focus:ring-[#E59800] cursor-pointer"
             title="Cambiar entre los roles RBAC institucionales"
           >
-            <div className="flex h-6 w-6 items-center justify-center rounded bg-[#C49E2D] text-[10px] font-bold text-[#006A4E] shadow-xs">
+            <div className="flex h-6 w-6 items-center justify-center rounded bg-[#E59800] text-[10px] font-bold text-[#006837] shadow-xs">
               {currentUser.avatarInitials}
             </div>
             <div className="hidden md:block">
               <p className="font-semibold text-white leading-tight truncate max-w-[130px]">
                 {currentUser.name.split(' ')[0]} {currentUser.name.split(' ')[1]}
               </p>
-              <p className="text-[10px] text-[#C49E2D] font-bold capitalize">
+              <p className="text-[10px] text-[#E59800] font-bold capitalize">
                 {roleLabelsMap[currentUser.role]?.title}
               </p>
             </div>
-            <ChevronDown className="h-3.5 w-3.5 text-slate-300 ml-0.5" />
+            <ChevronDown className="h-3.5 w-3.5 text-slate-200 ml-0.5" />
           </button>
 
           {showRoleSelector && (

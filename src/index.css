@@ -2,29 +2,31 @@
 
 @theme {
   --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-serif-heading: 'Playfair Display', Georgia, serif;
-  --font-cinzel: 'Cinzel', serif;
+  --font-heading: 'Montserrat', system-ui, sans-serif;
+  --font-script: 'Dancing Script', cursive;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
 
-  --color-umayor-green: #006A4E;
-  --color-umayor-gold: #C49E2D;
-  --color-umayor-gold-light: #E0C158;
-  --color-umayor-text: #1A1A1A;
+  --color-umayor-green: #006837;
+  --color-umayor-green-dark: #004D25;
+  --color-umayor-gold: #E59800;
+  --color-umayor-gold-bright: #F2A900;
+  --color-umayor-red: #D9232E;
+  --color-umayor-text: #1A202C;
   --color-umayor-muted: #4A5568;
-  --color-umayor-bg: #F9F9F9;
+  --color-umayor-bg: #F8FAF8;
   --color-umayor-surface: #FFFFFF;
   --color-umayor-border: #E2E8F0;
 }
 
 :root {
   color-scheme: light;
-  --bg-page: #F9F9F9;
+  --bg-page: #F8FAF8;
   --bg-panel: #FFFFFF;
-  --text-primary: #1A1A1A;
+  --text-primary: #1A202C;
   --text-secondary: #4A5568;
   --border-color: #E2E8F0;
-  --shadow-umayor: 0 4px 12px rgba(0, 0, 0, 0.05);
-  --shadow-umayor-lg: 0 10px 25px -3px rgba(0, 106, 78, 0.08), 0 4px 6px -2px rgba(196, 158, 45, 0.05);
+  --shadow-umayor: 0 4px 12px rgba(0, 104, 55, 0.06);
+  --shadow-umayor-lg: 0 10px 25px -3px rgba(0, 104, 55, 0.1), 0 4px 6px -2px rgba(229, 152, 0, 0.08);
   --radius-card: 12px;
   --radius-button: 6px;
   --font-scale: 1;
@@ -44,40 +46,26 @@ body {
   font-family: var(--font-sans);
   color: var(--text-primary);
   background-color: var(--bg-page);
-  /* Sutil patrón de fondo de contornos arquitectónicos / arcos coloniales */
-  background-image: radial-gradient(circle at 50% 0%, rgba(196, 158, 45, 0.03) 0%, transparent 75%),
-                    linear-gradient(135deg, rgba(0, 106, 78, 0.015) 0%, transparent 100%);
+  /* Sutiles ondas y luz de fondo estilo banner UMAYOR */
+  background-image: 
+    radial-gradient(circle at 10% 0%, rgba(0, 104, 55, 0.04) 0%, transparent 40%),
+    radial-gradient(circle at 90% 100%, rgba(229, 152, 0, 0.05) 0%, transparent 40%);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-/* Títulos Elegantes (Playfair Display / Cinzel) */
-h1, h2, .font-serif-heading, .font-serif {
-  font-family: var(--font-serif-heading);
+/* Headings Montserrat Bold */
+h1, h2, h3, .font-heading {
+  font-family: var(--font-heading);
 }
 
-.font-cinzel {
-  font-family: var(--font-cinzel);
+/* Cursiva Cómplice Institucional "permanente" */
+.font-script, .text-script, .permanente-script {
+  font-family: var(--font-script);
+  color: #E59800;
 }
 
-h1 {
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-h2 {
-  font-weight: 700;
-}
-
-/* Lema Institucional en Cursiva Dorada */
-.lema-institucional {
-  font-family: var(--font-serif-heading);
-  font-style: italic;
-  color: #C49E2D;
-  letter-spacing: 0.02em;
-}
-
-/* Base button and input styling to enforce 6px border radius standard */
+/* Base button and input styling */
 button:not(.rounded-full),
 input:not(.rounded-full),
 select:not(.rounded-full),
@@ -85,7 +73,7 @@ textarea:not(.rounded-full) {
   border-radius: var(--radius-button);
 }
 
-/* Card and surface styling with 12px radius & soft shadow */
+/* Cards & Surfaces */
 .umayor-card,
 div[data-slot='card'],
 .card {
@@ -95,27 +83,29 @@ div[data-slot='card'],
   box-shadow: var(--shadow-umayor);
 }
 
-/* Hito de Progreso con borde dorado rico e icono interior */
-.hito-dorado {
-  width: 3rem;
-  height: 3rem;
-  border-radius: 9999px;
-  border: 2px solid #C49E2D;
-  background-color: #FFFFFF;
-  display: flex;
+/* Hito / Medal de Calidad UMAYOR */
+.medal-calidad {
+  position: relative;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #C49E2D;
-  box-shadow: 0 2px 8px rgba(196, 158, 45, 0.15);
-  transition: all 0.2s ease;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #F2A900 0%, #E59800 100%);
+  color: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(229, 152, 0, 0.3);
+  border: 2px solid #FFFFFF;
 }
 
-.hito-dorado:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(196, 158, 45, 0.25);
-  background-color: #006A4E;
-  color: #FFFFFF;
-  border-color: #006A4E;
+.medal-calidad::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  width: 12px;
+  height: 8px;
+  background-color: #006837;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
 }
 
 /* High-accessibility focus ring */
@@ -124,9 +114,9 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 a:focus-visible {
-  outline: 2px solid #C49E2D;
+  outline: 2px solid #E59800;
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgba(196, 158, 45, 0.2);
+  box-shadow: 0 0 0 4px rgba(229, 152, 0, 0.25);
 }
 
 /* High Contrast Mode for WCAG 2.1 AAA Accessibility */
@@ -135,7 +125,7 @@ a:focus-visible {
   --bg-panel: #121212 !important;
   --text-primary: #FFFFFF !important;
   --text-secondary: #E2E8F0 !important;
-  --border-color: #C49E2D !important;
+  --border-color: #E59800 !important;
   color-scheme: dark;
 }
 
@@ -152,7 +142,7 @@ a:focus-visible {
 .high-contrast .bg-slate-100 {
   background-color: #121212 !important;
   color: #FFFFFF !important;
-  border-color: #C49E2D !important;
+  border-color: #E59800 !important;
 }
 
 .high-contrast .text-slate-900,
@@ -175,11 +165,11 @@ a:focus-visible {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 106, 78, 0.25);
+  background: rgba(0, 104, 55, 0.25);
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(196, 158, 45, 0.6);
+  background: rgba(229, 152, 0, 0.6);
 }
 
 /* Print Styles */

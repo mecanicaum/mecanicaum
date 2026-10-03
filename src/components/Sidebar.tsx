@@ -11,6 +11,7 @@ import {
   UserCog,
   LogOut
 } from 'lucide-react';
+import { UmayorLogo } from './UmayorLogo';
 
 interface SidebarProps {
   currentTab: string;
@@ -72,7 +73,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
     {
       id: 'modulo_admin',
       label: 'F. Administración del comité',
-      sublabel: 'Miembros, roles y estamentos',
+      sublabel: 'Miembros, roles, estamentos y marca',
       icon: UserCog,
       roles: ['super_admin', 'presidente', 'autoevaluacion', 'seguimiento', 'miembro'],
     },
@@ -80,12 +81,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
 
   return (
     <aside className="w-64 lg:w-72 shrink-0 border-r border-[#E2E8F0] bg-white flex flex-col justify-between h-[calc(100vh-6rem)] sticky top-24 select-none rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.05)] my-2">
-      <div className="p-3.5 space-y-5 overflow-y-auto">
+      <div className="p-3.5 space-y-4 overflow-y-auto">
+        {/* Institutional Branding Badge */}
+        <div className="p-2 bg-[#F8FAF8] rounded-xl border border-[#E2E8F0] shadow-2xs flex items-center justify-center">
+          <UmayorLogo size="sm" variant="full" showSubtext={true} />
+        </div>
+
         {/* Active Role Card */}
         <div className={`rounded-xl border p-3.5 shadow-xs ${
           currentUser.role === 'super_admin'
-            ? 'border-[#C49E2D]/40 bg-gradient-to-br from-[#006A4E]/10 via-[#C49E2D]/5 to-white'
-            : 'border-[#E2E8F0] bg-[#F9F9F9]'
+            ? 'border-[#E59800]/40 bg-gradient-to-br from-[#006837]/10 via-[#E59800]/5 to-white'
+            : 'border-[#E2E8F0] bg-[#F8FAF8]'
         }`}>
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-[#4A5568] font-cinzel">
@@ -186,23 +192,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
         </div>
       </div>
 
-      {/* Footer System Info & Logout */}
-      <div className="p-3.5 border-t border-[#E2E8F0] bg-[#F8FAF9] text-[11px] text-[#64748B] space-y-2.5 rounded-b-xl">
-        <div className="flex items-center justify-between">
-          <span className="font-semibold text-[#1E293B]">Estado SIG</span>
-          <span className="flex items-center gap-1.5 text-emerald-700 font-bold">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            En línea (UMAYOR)
-          </span>
-        </div>
-        <button
-          onClick={() => logout()}
-          className="flex w-full items-center justify-center gap-2 px-3 py-2 rounded-md border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-800 font-bold text-xs transition-all shadow-xs"
-          title="Cerrar sesión institucional y volver al portal de ingreso"
-        >
-          <LogOut className="h-4 w-4 text-rose-600" />
-          <span>Cerrar sesión</span>
-        </button>
+      {/* Footer System Info */}
+      <div className="p-3 border-t border-[#E2E8F0] bg-[#F8FAF8] text-[11px] text-[#64748B] rounded-b-xl flex items-center justify-between">
+        <span className="font-semibold text-[#1E293B]">SIG-Currículo v2.4</span>
+        <span className="flex items-center gap-1.5 text-emerald-700 font-bold text-[10px]">
+          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          En línea (UMAYOR)
+        </span>
       </div>
     </aside>
   );

@@ -255,4 +255,24 @@ export interface UserSettings {
   institutionName: string;
 }
 
+export interface BrandingConfig {
+  logoType: 'default' | 'custom_image';
+  customLogoUrl?: string; // Base64 data url or image URL
+  institutionName: string; // e.g. "INSTITUCIÓN UNIVERSITARIA"
+  facultyOrLocationName: string; // e.g. "MAYOR DE CARTAGENA"
+  bannerType: 'dynamic' | 'custom_image';
+  bannerImageUrl?: string; // Base64 data url or image URL
+  bannerSloganPrefix: string; // e.g. "LA CALIDAD, UN C"
+  bannerSloganWord: string; // e.g. "OMPR"
+  bannerSloganSuffix: string; // e.g. "OMISO"
+  bannerScriptWord: string; // e.g. "permanente"
+  bannerSubtitle: string; // e.g. "FACULTAD DE INGENIERÍA · CONSEJO CURRICULAR"
+  showQualitySeal: boolean;
+  accentColor: string; // e.g. "#006837"
+  goldColor: string; // e.g. "#E58A13"
+  updatedAt: string;
+  updatedBy: string;
+}
+
+
 

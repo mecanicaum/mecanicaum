@@ -18,11 +18,16 @@ import {
   Filter,
   Check,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Palette,
+  Lock
 } from 'lucide-react';
+import { BrandAssetsManager } from './admin/BrandAssetsManager';
+import { SuperAdminBrandingManager } from './admin/SuperAdminBrandingManager';
 
 export const Module_Admin: React.FC = () => {
   const { 
+    currentUser,
     users, 
     createUser, 
     updateUser, 
@@ -38,7 +43,7 @@ export const Module_Admin: React.FC = () => {
     deleteCustomRole 
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'members' | 'roles' | 'estamentos'>('members');
+  const [activeTab, setActiveTab] = useState<'members' | 'roles' | 'estamentos' | 'brand_assets' | 'brand_customization'>('members');
 
   // Search & Filter
   const [memberSearch, setMemberSearch] = useState('');
@@ -292,10 +297,10 @@ export const Module_Admin: React.FC = () => {
         </div>
 
         {/* Tab Selector */}
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl shrink-0">
+        <div className="flex flex-wrap items-center gap-1 bg-slate-100 p-1 rounded-xl shrink-0">
           <button
             onClick={() => setActiveTab('members')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
               activeTab === 'members'
                 ? 'bg-white text-slate-900 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -306,7 +311,7 @@ export const Module_Admin: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('roles')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
               activeTab === 'roles'
                 ? 'bg-white text-slate-900 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -317,7 +322,7 @@ export const Module_Admin: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('estamentos')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
               activeTab === 'estamentos'
                 ? 'bg-white text-slate-900 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -325,6 +330,32 @@ export const Module_Admin: React.FC = () => {
           >
             <Building2 className="h-3.5 w-3.5" />
             Estamentos ({estamentos.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('brand_assets')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+              activeTab === 'brand_assets'
+                ? 'bg-[#006837] text-white shadow-xs font-bold'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Palette className={`h-3.5 w-3.5 ${activeTab === 'brand_assets' ? 'text-[#E58A13]' : 'text-amber-600'}`} />
+            <span>Manual de Marca</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('brand_customization')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+              activeTab === 'brand_customization'
+                ? 'bg-[#E59800] text-[#006837] shadow-xs font-black'
+                : 'text-slate-700 hover:text-slate-900'
+            }`}
+            title="Módulo de Personalización del Logotipo y Banner (Exclusivo Super Administrador)"
+          >
+            <Lock className={`h-3.5 w-3.5 ${activeTab === 'brand_customization' ? 'text-[#006837]' : 'text-amber-600'}`} />
+            <span>Cambiar Logo & Banner</span>
+            <span className="text-[9px] bg-slate-900 text-[#E59800] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wider">
+              Super Admin
+            </span>
           </button>
         </div>
       </div>
@@ -647,6 +678,12 @@ export const Module_Admin: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* TAB 4: ACTIVOS DE MARCA & GUÍA DE USO INSTITUCIONAL */}
+      {activeTab === 'brand_assets' && <BrandAssetsManager />}
+
+      {/* TAB 5: PERSONALIZACIÓN DEL LOGOTIPO Y BANNER (SOLO SUPER ADMINISTRADOR) */}
+      {activeTab === 'brand_customization' && <SuperAdminBrandingManager />}
 
       {/* Modal: Crear / Editar Miembro */}
       {showMemberModal && (

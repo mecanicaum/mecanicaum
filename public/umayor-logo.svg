@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <!-- Left Stem Green (Darker Shade for 3D depth) -->
+    <linearGradient id="uLeftStem" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stopColor="#004D25"/>
+      <stop offset="100%" stopColor="#005A2B"/>
+    </linearGradient>
+
+    <!-- Right Stem Green (Lighter Vibrant Shade) -->
+    <linearGradient id="uRightStem" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stopColor="#007A38"/>
+      <stop offset="100%" stopColor="#008A40"/>
+    </linearGradient>
+
+    <!-- Bottom Curve Gradient: Sweeps from dark depth to bright vibrant emerald -->
+    <linearGradient id="uBottomCurve" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#004420"/>
+      <stop offset="40%" stopColor="#00632E"/>
+      <stop offset="75%" stopColor="#008A40"/>
+      <stop offset="100%" stopColor="#009647"/>
+    </linearGradient>
+
+    <!-- Gold Accent for MAYOR -->
+    <linearGradient id="mayorGold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stopColor="#F59E0B"/>
+      <stop offset="100%" stopColor="#D97706"/>
+    </linearGradient>
+
+    <!-- Subtle Drop Shadow -->
+    <filter id="softGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#000000" floodOpacity="0.12"/>
+    </filter>
+  </defs>
+
+  <!-- Transparent or pure white background compatible -->
+  <g id="U-Emblem" filter="url(#softGlow)">
+    <!-- Main U Base Geometry -->
+    <!-- Left Pillar Column with Capital -->
+    <path d="M 168 135 L 208 135 L 208 152 L 204 152 L 204 225 L 172 225 L 172 152 L 168 152 Z" fill="url(#uLeftStem)"/>
+    <!-- Left Column Capital Block Step -->
+    <rect x="165" y="135" width="45" height="17" rx="2" fill="#004822"/>
+
+    <!-- Right Pillar Column with Capital -->
+    <path d="M 292 135 L 332 135 L 332 152 L 328 152 L 328 225 L 296 225 L 296 152 L 292 152 Z" fill="url(#uRightStem)"/>
+    <!-- Right Column Capital Block Step -->
+    <rect x="290" y="135" width="44" height="17" rx="2" fill="#007335"/>
+
+    <!-- Bottom Curved Loop of the U -->
+    <path d="M 172 220 
+             C 172 300, 210 328, 250 328 
+             C 290 328, 328 300, 328 220 
+             L 296 220 
+             C 296 276, 276 295, 250 295 
+             C 224 295, 204 276, 204 220 
+             Z" 
+          fill="url(#uBottomCurve)"/>
+
+    <!-- Inner Shadow Arc on Left Bottom for depth -->
+    <path d="M 172 220 
+             C 172 275, 192 305, 225 320 
+             C 205 305, 195 270, 195 220 
+             Z" 
+          fill="#003D1C" opacity="0.55"/>
+
+    <!-- Ribbon & MAYOR Centerpiece -->
+    <g id="Mayor-Banner">
+      <!-- White background plate to isolate MAYOR from the green stems -->
+      <path d="M 160 182 Q 250 178 340 182 L 340 236 Q 250 248 160 236 Z" 
+            fill="#FFFFFF" />
+
+      <!-- MAYOR Typography (Solid Bold Warm Gold with sharp geometry) -->
+      <text x="250" y="222" 
+            text-anchor="middle" 
+            fill="#E58A13" 
+            font-family="'Montserrat', 'Arial Black', sans-serif" 
+            font-weight="900" 
+            font-size="47" 
+            letter-spacing="2.5">
+        MAYOR
+      </text>
+
+      <!-- Red Accent Ribbon Arc below MAYOR -->
+      <path d="M 166 230 Q 250 246 334 230" 
+            stroke="#D32F2F" 
+            stroke-width="5" 
+            stroke-linecap="round" 
+            fill="none"/>
+
+      <!-- Thin White Gap -->
+      <!-- Green/Gold Lower Arc Stroke -->
+      <path d="M 168 238 Q 250 254 332 238" 
+            stroke="#008037" 
+            stroke-width="3" 
+            stroke-linecap="round" 
+            fill="none"/>
+    </g>
+  </g>
+
+  <!-- Typography Block: INSTITUCIÓN UNIVERSITARIA / MAYOR DE CARTAGENA -->
+  <g id="Institution-Text" text-anchor="middle" fill="#2D3748">
+    <text x="250" y="380" 
+          font-family="'Montserrat', system-ui, sans-serif" 
+          font-weight="900" 
+          font-size="23.5" 
+          letter-spacing="0.5">
+      INSTITUCIÓN UNIVERSITARIA
+    </text>
+    <text x="250" y="415" 
+          font-family="'Montserrat', system-ui, sans-serif" 
+          font-weight="900" 
+          font-size="28" 
+          letter-spacing="1">
+      MAYOR DE CARTAGENA
+    </text>
+  </g>
+</svg>
