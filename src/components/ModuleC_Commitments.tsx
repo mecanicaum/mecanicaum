@@ -21,13 +21,20 @@ import {
   BellRing,
   Copy,
   Sparkles,
-  GraduationCap
+  GraduationCap,
+  UserCheck,
+  Pencil,
+  Trash2,
+  History
 } from 'lucide-react';
 
 export const ModuleC_Commitments: React.FC = () => {
   const { 
     currentUser, 
     commitments, 
+    updateCommitment,
+    deleteCommitment,
+    reassignCommitment,
     submitCommitmentEvidence, 
     auditCommitment, 
     sendCommitmentDeadlineAlert,
@@ -37,6 +44,7 @@ export const ModuleC_Commitments: React.FC = () => {
     requestActAccess,
     resolveAccessRequest,
     programs,
+    users,
     activeProgramId,
     setActiveProgramId
   } = useApp();
@@ -56,6 +64,22 @@ export const ModuleC_Commitments: React.FC = () => {
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [auditTargetStatus, setAuditTargetStatus] = useState<CommitmentStatus>('cumplido');
   const [auditNotes, setAuditNotes] = useState('');
+
+  // Reassignment Modal State
+  const [showReassignModal, setShowReassignModal] = useState(false);
+  const [reassignTargetUserId, setReassignTargetUserId] = useState('');
+  const [reassignJustification, setReassignJustification] = useState('');
+
+  // Edit Commitment State (Superadmin / Presidente / Seguimiento)
+  const [showEditCommitmentModal, setShowEditCommitmentModal] = useState(false);
+  const [editComTitle, setEditComTitle] = useState('');
+  const [editComDesc, setEditComDesc] = useState('');
+  const [editComDueDate, setEditComDueDate] = useState('');
+  const [editComPriority, setEditComPriority] = useState<'alta' | 'media' | 'baja'>('media');
+  const [editComStatus, setEditComStatus] = useState<CommitmentStatus>('pendiente');
+
+  // Delete Commitment Confirm State (Superadmin)
+  const [showDeleteCommitmentModal, setShowDeleteCommitmentModal] = useState(false);
 
   // Access Request Form State
   const [showAccessRequestModal, setShowAccessRequestModal] = useState(false);
@@ -560,16 +584,63 @@ Institución Universitaria Mayor de Cartagena
         {/* Selected Commitment Detail & Action Drawer */}
         {selectedCommitment ? (
           <div className="lg:col-span-5 bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-5">
-            <div className="border-b border-slate-100 pb-3 flex items-start justify-between gap-3">
-              <div>
-                <span className="font-mono text-xs font-bold text-slate-500">
-                  {selectedCommitment.meetingCode}
-                </span>
-                <h3 className="text-sm font-bold text-slate-900 mt-0.5 leading-snug">
-                  {selectedCommitment.title}
-                </h3>
+            <div className="border-b border-slate-100 pb-3 flex flex-col gap-2">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <span className="font-mono text-xs font-bold text-slate-500">
+                    {selectedCommitment.meetingCode}
+                  </span>
+                  <h3 className="text-sm font-bold text-slate-900 mt-0.5 leading-snug">
+                    {selectedCommitment.title}
+                  </h3>
+                </div>
+                <div>{getStatusBadge(selectedCommitment.status, selectedCommitment.dueDate)}</div>
               </div>
-              <div>{getStatusBadge(selectedCommitment.status, selectedCommitment.dueDate)}</div>
+
+              {/* Super Admin & Management Controls Toolbar */}
+              <div className="flex items-center gap-1.5 pt-2 flex-wrap border-t border-slate-50">
+                {(isTracker || isPresident) && (
+                  <>
+                    <button
+                      onClick={() => {
+                        setReassignTargetUserId(selectedCommitment.responsibleId);
+                        setReassignJustification('');
+                        setShowReassignModal(true);
+                      }}
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-lg transition-colors"
+                      title="Reasignar este compromiso a otro integrante del comité"
+                    >
+                      <UserCheck className="h-3 w-3 text-emerald-600" />
+                      Reasignar
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditComTitle(selectedCommitment.title);
+                        setEditComDesc(selectedCommitment.description);
+                        setEditComDueDate(selectedCommitment.dueDate);
+                        setEditComPriority(selectedCommitment.priority);
+                        setEditComStatus(selectedCommitment.status);
+                        setShowEditCommitmentModal(true);
+                      }}
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2.5 py-1 rounded-lg transition-colors"
+                      title="Editar título, descripción, fecha o prioridad"
+                    >
+                      <Pencil className="h-3 w-3 text-amber-600" />
+                      Editar
+                    </button>
+                  </>
+                )}
+                {currentUser.role === 'super_admin' && (
+                  <button
+                    onClick={() => setShowDeleteCommitmentModal(true)}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-800 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2.5 py-1 rounded-lg transition-colors"
+                    title="Eliminar compromiso (Superadministrador)"
+                  >
+                    <Trash2 className="h-3 w-3 text-rose-600" />
+                    Eliminar
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="space-y-3 text-xs">
@@ -582,7 +653,7 @@ Institución Universitaria Mayor de Cartagena
 
               <div className="grid grid-cols-2 gap-2 text-[11px]">
                 <div className="bg-slate-50 p-2 rounded border border-slate-100">
-                  <span className="text-slate-400">Responsable:</span>
+                  <span className="text-slate-400">Responsable Activo:</span>
                   <p className="font-semibold text-slate-800 mt-0.5 truncate">{selectedCommitment.responsibleName}</p>
                   <p className="text-slate-400 text-[10px] font-mono truncate">{selectedCommitment.responsibleEmail}</p>
                 </div>
@@ -592,6 +663,28 @@ Institución Universitaria Mayor de Cartagena
                   <p className="text-slate-400 text-[10px]">Asignado por: {selectedCommitment.assignedBy}</p>
                 </div>
               </div>
+
+              {/* Reassignment History Log */}
+              {selectedCommitment.reassignmentHistory && selectedCommitment.reassignmentHistory.length > 0 && (
+                <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-2.5 space-y-2">
+                  <h4 className="font-bold text-[11px] text-slate-700 flex items-center gap-1.5 uppercase tracking-wider">
+                    <History className="h-3.5 w-3.5 text-slate-500" />
+                    Historial de Reasignaciones ({selectedCommitment.reassignmentHistory.length})
+                  </h4>
+                  <div className="space-y-1.5">
+                    {selectedCommitment.reassignmentHistory.map((rh) => (
+                      <div key={rh.id} className="text-[10px] border-b border-slate-200/60 pb-1.5 last:border-0 last:pb-0">
+                        <div className="flex items-center justify-between text-slate-800 font-semibold">
+                          <span>{rh.previousResponsibleName} ➔ {rh.newResponsibleName}</span>
+                          <span className="font-mono text-slate-400">{rh.reassignedAt?.slice(0, 10)}</span>
+                        </div>
+                        <p className="text-slate-600 mt-0.5">Motivo: <span className="italic">{rh.justification}</span></p>
+                        <p className="text-slate-400 text-[9px]">Por: {rh.reassignedBy}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Evidences List */}
               <div className="border-t border-slate-100 pt-3 space-y-2">
@@ -1171,6 +1264,243 @@ Institución Universitaria Mayor de Cartagena
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Reasignar Responsable de Compromiso */}
+      {showReassignModal && selectedCommitment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4 border border-slate-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <UserCheck className="h-4 w-4 text-emerald-600" />
+                Reasignar Responsable de Tarea
+              </h3>
+              <button
+                onClick={() => setShowReassignModal(false)}
+                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!reassignTargetUserId || !reassignJustification.trim()) return;
+                await reassignCommitment(selectedCommitment.id, reassignTargetUserId, reassignJustification.trim());
+                setShowReassignModal(false);
+              }}
+              className="space-y-3 text-xs"
+            >
+              <div>
+                <span className="text-[11px] font-semibold text-slate-500">Compromiso:</span>
+                <p className="font-bold text-slate-900">{selectedCommitment.title}</p>
+                <p className="text-slate-500 text-[10px]">Responsable actual: <strong>{selectedCommitment.responsibleName}</strong></p>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                  Nuevo Responsable Asignado
+                </label>
+                <select
+                  required
+                  value={reassignTargetUserId}
+                  onChange={(e) => setReassignTargetUserId(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 p-2 text-xs font-medium text-slate-800 focus:ring-2 focus:ring-slate-900"
+                >
+                  <option value="">Seleccione un integrante del comité...</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.roleLabel || u.role}) — {u.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                  Justificación de la Reasignación (Auditoría)
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  value={reassignJustification}
+                  onChange={(e) => setReassignJustification(e.target.value)}
+                  placeholder="Ej. Reorganización de carga académica docente / Solicitud del Comité / Reemplazo por comisión..."
+                  className="w-full rounded-lg border border-slate-200 p-2 text-xs font-medium text-slate-800 focus:ring-2 focus:ring-slate-900"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowReassignModal(false)}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-800 shadow-xs"
+                >
+                  <UserCheck className="h-3.5 w-3.5" />
+                  Confirmar Reasignación
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Editar Compromiso (Superadmin / Presidente / Seguimiento) */}
+      {showEditCommitmentModal && selectedCommitment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4 border border-slate-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Pencil className="h-4 w-4 text-amber-600" />
+                Modificar Compromiso ({selectedCommitment.meetingCode})
+              </h3>
+              <button
+                onClick={() => setShowEditCommitmentModal(false)}
+                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                await updateCommitment(selectedCommitment.id, {
+                  title: editComTitle,
+                  description: editComDesc,
+                  dueDate: editComDueDate,
+                  priority: editComPriority,
+                  status: editComStatus,
+                });
+                setShowEditCommitmentModal(false);
+              }}
+              className="space-y-3 text-xs"
+            >
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">Título del Compromiso</label>
+                <input
+                  type="text"
+                  required
+                  value={editComTitle}
+                  onChange={(e) => setEditComTitle(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 p-2 text-xs font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">Descripción y Alcance</label>
+                <textarea
+                  rows={3}
+                  required
+                  value={editComDesc}
+                  onChange={(e) => setEditComDesc(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 p-2 text-xs font-medium"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Fecha Límite</label>
+                  <input
+                    type="date"
+                    required
+                    value={editComDueDate}
+                    onChange={(e) => setEditComDueDate(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 p-2 text-xs font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Prioridad</label>
+                  <select
+                    value={editComPriority}
+                    onChange={(e) => setEditComPriority(e.target.value as any)}
+                    className="w-full rounded-lg border border-slate-200 p-2 text-xs font-medium"
+                  >
+                    <option value="alta">Alta</option>
+                    <option value="media">Media</option>
+                    <option value="baja">Baja</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Estado</label>
+                  <select
+                    value={editComStatus}
+                    onChange={(e) => setEditComStatus(e.target.value as any)}
+                    className="w-full rounded-lg border border-slate-200 p-2 text-xs font-medium"
+                  >
+                    <option value="pendiente">Pendiente</option>
+                    <option value="en_revision">En Revisión</option>
+                    <option value="cumplido">Cumplido</option>
+                    <option value="vencido">Vencido</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowEditCommitmentModal(false)}
+                  className="rounded-lg border border-slate-200 px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-amber-600 px-4 py-2 font-semibold text-white hover:bg-amber-700 shadow-xs"
+                >
+                  Guardar Cambios
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Confirmar Eliminar Compromiso (Superadministrador) */}
+      {showDeleteCommitmentModal && selectedCommitment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4 border border-slate-200 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 mx-auto">
+              <Trash2 className="h-6 w-6" />
+            </div>
+            <h3 className="text-sm font-bold text-slate-900">
+              ¿Eliminar el Compromiso?
+            </h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Está a punto de borrar el compromiso <strong>'{selectedCommitment.title}'</strong> de forma irreversible. Esta acción se registrará en la auditoría institucional.
+            </p>
+
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteCommitmentModal(false)}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const targetId = selectedCommitment.id;
+                  await deleteCommitment(targetId);
+                  setShowDeleteCommitmentModal(false);
+                  const remaining = commitments.filter((c) => c.id !== targetId);
+                  setSelectedCommitment(remaining[0] || null);
+                }}
+                className="rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700 shadow-xs"
+              >
+                Sí, Eliminar Compromiso
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -496,6 +496,16 @@ class Database {
     return this.data.meetings[idx];
   }
 
+  public deleteMeeting(id: string): boolean {
+    const initialLen = this.data.meetings.length;
+    this.data.meetings = this.data.meetings.filter((m) => m.id !== id);
+    if (this.data.meetings.length !== initialLen) {
+      this.saveDatabase();
+      return true;
+    }
+    return false;
+  }
+
   // Motions
   public getMotions(): Motion[] {
     return this.data.motions;
@@ -540,6 +550,16 @@ class Database {
     this.data.commitments[idx] = { ...this.data.commitments[idx], ...updates };
     this.saveDatabase();
     return this.data.commitments[idx];
+  }
+
+  public deleteCommitment(id: string): boolean {
+    const initialLen = this.data.commitments.length;
+    this.data.commitments = this.data.commitments.filter((c) => c.id !== id);
+    if (this.data.commitments.length !== initialLen) {
+      this.saveDatabase();
+      return true;
+    }
+    return false;
   }
 
   // Quality Factors

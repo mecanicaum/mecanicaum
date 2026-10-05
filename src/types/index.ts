@@ -179,6 +179,18 @@ export interface CommitmentEvidence {
   fileName?: string;
 }
 
+export interface ReassignmentRecord {
+  id: string;
+  previousResponsibleId: string;
+  previousResponsibleName: string;
+  newResponsibleId: string;
+  newResponsibleName: string;
+  newResponsibleEmail: string;
+  reassignedBy: string;
+  reassignedAt: string;
+  justification: string;
+}
+
 export interface Commitment {
   id: string;
   meetingId: string;
@@ -203,6 +215,7 @@ export interface Commitment {
   reminderCount?: number;
   programId?: string;
   programName?: string;
+  reassignmentHistory?: ReassignmentRecord[];
 }
 
 // Modelado de Nomenclaturas de Autoevaluación y Calidad Curricular
@@ -225,7 +238,7 @@ export interface QualityFactor {
   id: string;
   code: string; // e.g. "F3"
   name: string;
-  framework: 'CNA' | 'ABET' | 'INSTITUCIONAL';
+  framework: 'INSTITUCIONAL' | 'AUTOEVALUACION' | 'PROGRAMA' | 'CNA' | 'ABET' | string;
   description: string;
   features: QualityFeature[];
 }

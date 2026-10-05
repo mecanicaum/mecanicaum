@@ -225,7 +225,7 @@ export const CNA_ABET_TEMPLATE_FACTORS: QualityFactor[] = [
     id: 'fact-1',
     code: 'F1',
     name: 'Misión, Visión y Proyecto Institucional',
-    framework: 'CNA',
+    framework: 'INSTITUCIONAL',
     description: 'Coherencia y pertinencia del programa académico con el Proyecto Educativo del Programa (PEP) y el contexto regional.',
     features: [
       {
@@ -254,7 +254,7 @@ export const CNA_ABET_TEMPLATE_FACTORS: QualityFactor[] = [
     id: 'fact-3',
     code: 'F3',
     name: 'Profesores y Desarrollo Curricular',
-    framework: 'CNA',
+    framework: 'INSTITUCIONAL',
     description: 'Cualificación, escalafón, asignación de labor académica y evaluación de la docencia.',
     features: [
       {
@@ -277,7 +277,7 @@ export const CNA_ABET_TEMPLATE_FACTORS: QualityFactor[] = [
     id: 'fact-4',
     code: 'F4',
     name: 'Procesos Académicos y Flexibilidad Curricular',
-    framework: 'CNA',
+    framework: 'INSTITUCIONAL',
     description: 'Estructura del plan de estudios, microcurrículos, créditos académicos y resultados de aprendizaje (RA).',
     features: [
       {

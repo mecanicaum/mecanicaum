@@ -31,6 +31,8 @@ export const ModuleA_Meetings: React.FC<ModuleAProps> = ({ onGoToLiveMeeting }) 
     currentUser, 
     meetings, 
     createMeeting, 
+    updateMeeting,
+    deleteMeeting,
     addAgendaItem, 
     deleteAgendaItem,
     sendCitations,
@@ -65,6 +67,17 @@ export const ModuleA_Meetings: React.FC<ModuleAProps> = ({ onGoToLiveMeeting }) 
   const [newMeetingModality, setNewMeetingModality] = useState<'presencial' | 'virtual' | 'hibrida'>('hibrida');
   const [newMeetingLocation, setNewMeetingLocation] = useState('Sala de Consejos Bloque 5 / Google Meet institucional');
   const [newMeetingObservations, setNewMeetingObservations] = useState('');
+
+  // Super Admin Edit & Delete Meeting State
+  const [showEditMeetingModal, setShowEditMeetingModal] = useState(false);
+  const [editMeetingTitle, setEditMeetingTitle] = useState('');
+  const [editMeetingDate, setEditMeetingDate] = useState('');
+  const [editMeetingStartTime, setEditMeetingStartTime] = useState('');
+  const [editMeetingEndTime, setEditMeetingEndTime] = useState('');
+  const [editMeetingModality, setEditMeetingModality] = useState<'presencial' | 'virtual' | 'hibrida'>('hibrida');
+  const [editMeetingLocation, setEditMeetingLocation] = useState('');
+  const [editMeetingObservations, setEditMeetingObservations] = useState('');
+  const [showDeleteMeetingModal, setShowDeleteMeetingModal] = useState(false);
 
   // Add Item to Agenda State
   const [newItemTitle, setNewItemTitle] = useState('');
@@ -379,7 +392,7 @@ export const ModuleA_Meetings: React.FC<ModuleAProps> = ({ onGoToLiveMeeting }) 
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
                 <button
                   onClick={() => setShowCitationModal(true)}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
@@ -388,6 +401,34 @@ export const ModuleA_Meetings: React.FC<ModuleAProps> = ({ onGoToLiveMeeting }) 
                   <Mail className="h-3.5 w-3.5 text-slate-500" />
                   Citación Oficial
                 </button>
+
+                {currentUser.role === 'super_admin' && (
+                  <>
+                    <button
+                      onClick={() => {
+                        setEditMeetingTitle(selectedMeeting.title);
+                        setEditMeetingDate(selectedMeeting.date);
+                        setEditMeetingStartTime(selectedMeeting.startTime);
+                        setEditMeetingEndTime(selectedMeeting.endTime);
+                        setEditMeetingModality(selectedMeeting.modality);
+                        setEditMeetingLocation(selectedMeeting.locationOrUrl);
+                        setEditMeetingObservations(selectedMeeting.generalObservations || '');
+                        setShowEditMeetingModal(true);
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 transition-colors"
+                      title="Editar parámetros y detalles de la sesión (Superadministrador)"
+                    >
+                      Editar Sesión
+                    </button>
+                    <button
+                      onClick={() => setShowDeleteMeetingModal(true)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition-colors"
+                      title="Eliminar acta o sesión del sistema (Superadministrador)"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </>
+                )}
 
                 {selectedMeeting.status === 'cerrada' && (
                   <button
@@ -888,6 +929,179 @@ export const ModuleA_Meetings: React.FC<ModuleAProps> = ({ onGoToLiveMeeting }) 
           qualityMappings={qualityMappings}
           onClose={() => setShowPdfModal(false)}
         />
+      )}
+
+      {/* Modal: Editar Sesión / Acta (Superadministrador) */}
+      {showEditMeetingModal && selectedMeeting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4 border border-slate-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                Modificar Acta / Sesión ({selectedMeeting.code})
+              </h3>
+              <button
+                onClick={() => setShowEditMeetingModal(false)}
+                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                await updateMeeting(selectedMeeting.id, {
+                  title: editMeetingTitle,
+                  date: editMeetingDate,
+                  startTime: editMeetingStartTime,
+                  endTime: editMeetingEndTime,
+                  modality: editMeetingModality,
+                  locationOrUrl: editMeetingLocation,
+                  generalObservations: editMeetingObservations,
+                });
+                setShowEditMeetingModal(false);
+              }}
+              className="space-y-3 text-xs"
+            >
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">Título de la Convocatoria</label>
+                <input
+                  type="text"
+                  required
+                  value={editMeetingTitle}
+                  onChange={(e) => setEditMeetingTitle(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 p-2 text-xs font-medium"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Fecha</label>
+                  <input
+                    type="date"
+                    required
+                    value={editMeetingDate}
+                    onChange={(e) => setEditMeetingDate(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 p-2 text-xs font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Hora Inicio</label>
+                  <input
+                    type="time"
+                    required
+                    value={editMeetingStartTime}
+                    onChange={(e) => setEditMeetingStartTime(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 p-2 text-xs font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Hora Fin</label>
+                  <input
+                    type="time"
+                    required
+                    value={editMeetingEndTime}
+                    onChange={(e) => setEditMeetingEndTime(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 p-2 text-xs font-medium"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Modalidad</label>
+                  <select
+                    value={editMeetingModality}
+                    onChange={(e) => setEditMeetingModality(e.target.value as any)}
+                    className="w-full rounded-lg border border-slate-200 p-2 text-xs font-medium"
+                  >
+                    <option value="presencial">Presencial</option>
+                    <option value="virtual">Virtual</option>
+                    <option value="hibrida">Híbrida</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Lugar / Enlace</label>
+                  <input
+                    type="text"
+                    required
+                    value={editMeetingLocation}
+                    onChange={(e) => setEditMeetingLocation(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 p-2 text-xs font-medium"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">Observaciones Generales</label>
+                <textarea
+                  rows={2}
+                  value={editMeetingObservations}
+                  onChange={(e) => setEditMeetingObservations(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 p-2 text-xs font-medium"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowEditMeetingModal(false)}
+                  className="rounded-lg border border-slate-200 px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-amber-600 px-4 py-2 font-semibold text-white hover:bg-amber-700 shadow-xs"
+                >
+                  Guardar Cambios
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Confirmar Eliminar Sesión / Acta (Superadministrador) */}
+      {showDeleteMeetingModal && selectedMeeting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4 border border-slate-200 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 mx-auto">
+              <Trash2 className="h-6 w-6" />
+            </div>
+            <h3 className="text-sm font-bold text-slate-900">
+              ¿Eliminar la Sesión / Acta {selectedMeeting.code}?
+            </h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Esta acción eliminará de forma permanente la sesión, sus mociones de votación y la disponibilidad del acta. Esta operación queda registrada en la bitácora de auditoría.
+            </p>
+
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteMeetingModal(false)}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const targetId = selectedMeeting.id;
+                  await deleteMeeting(targetId);
+                  setShowDeleteMeetingModal(false);
+                  const remaining = meetings.filter((m) => m.id !== targetId);
+                  if (remaining.length > 0) {
+                    setSelectedMeetingId(remaining[0].id);
+                  }
+                }}
+                className="rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700 shadow-xs"
+              >
+                Sí, Eliminar Acta
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -82,7 +82,7 @@ export const ModuleD_SelfEvaluation: React.FC = () => {
   // New Factor Form
   const [newFactorCode, setNewFactorCode] = useState('');
   const [newFactorName, setNewFactorName] = useState('');
-  const [newFactorFramework, setNewFactorFramework] = useState<'CNA' | 'ABET' | 'INSTITUCIONAL'>('CNA');
+  const [newFactorFramework, setNewFactorFramework] = useState<'INSTITUCIONAL' | 'AUTOEVALUACION' | 'PROGRAMA' | string>('INSTITUCIONAL');
   const [newFactorDesc, setNewFactorDesc] = useState('');
 
   // New Feature Form
@@ -946,12 +946,12 @@ export const ModuleD_SelfEvaluation: React.FC = () => {
                   <label className="block text-[11px] font-medium text-slate-700 mb-1">Marco</label>
                   <select
                     value={newFactorFramework}
-                    onChange={(e) => setNewFactorFramework(e.target.value as any)}
-                    className="w-full rounded border border-slate-200 p-1.5"
+                    onChange={(e) => setNewFactorFramework(e.target.value)}
+                    className="w-full rounded border border-slate-200 p-1.5 text-xs font-medium"
                   >
-                    <option value="CNA">CNA</option>
-                    <option value="ABET">ABET</option>
                     <option value="INSTITUCIONAL">Institucional</option>
+                    <option value="AUTOEVALUACION">Autoevaluación Curricular</option>
+                    <option value="PROGRAMA">Específico de Programa</option>
                   </select>
                 </div>
               </div>

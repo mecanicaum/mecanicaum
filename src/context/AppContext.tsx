@@ -136,6 +136,7 @@ interface AppContextType {
   setActiveMeetingId: (id: string) => void;
   createMeeting: (newMeeting: Omit<Meeting, 'id' | 'quorumPresentCount' | 'quorumTotalRequired'>) => Promise<Meeting>;
   updateMeeting: (id: string, updates: Partial<Meeting>) => Promise<void>;
+  deleteMeeting: (id: string) => Promise<void>;
   addAgendaItem: (meetingId: string, item: Omit<AgendaItem, 'id' | 'agreements' | 'deliberations' | 'driveAttachments'>) => Promise<void>;
   updateAgendaItem: (meetingId: string, itemId: string, updates: Partial<AgendaItem>) => Promise<void>;
   deleteAgendaItem: (meetingId: string, itemId: string) => Promise<void>;
@@ -151,6 +152,9 @@ interface AppContextType {
   // Commitments & Audit
   commitments: Commitment[];
   createCommitment: (data: Omit<Commitment, 'id' | 'assignedAt' | 'status' | 'evidences' | 'assignedBy'>) => Promise<Commitment>;
+  updateCommitment: (commitmentId: string, updates: Partial<Commitment>) => Promise<void>;
+  deleteCommitment: (commitmentId: string) => Promise<void>;
+  reassignCommitment: (commitmentId: string, newResponsibleId: string, justification: string) => Promise<void>;
   submitCommitmentEvidence: (commitmentId: string, description: string, driveUrl: string, fileName?: string) => Promise<void>;
   auditCommitment: (commitmentId: string, newStatus: CommitmentStatus, notes: string) => Promise<void>;
   sendCommitmentDeadlineAlert: (commitmentId: string, customSubject?: string, customBody?: string) => Promise<{ success: boolean; message: string }>;
@@ -962,6 +966,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {}
   };
 
+  const deleteMeeting = async (id: string) => {
+    setMeetings((prev) => prev.filter((m) => m.id !== id));
+    setMotions((prev) => prev.filter((mo) => mo.meetingId !== id));
+
+    try {
+      await api.deleteMeeting(id);
+    } catch {}
+  };
+
   const addAgendaItem = async (
     meetingId: string,
     item: Omit<AgendaItem, 'id' | 'agreements' | 'deliberations' | 'driveAttachments'>
@@ -1228,6 +1241,81 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {}
 
     return newCommitment;
+  };
+
+  const updateCommitment = async (commitmentId: string, updates: Partial<Commitment>) => {
+    setCommitments((prev) =>
+      prev.map((c) => (c.id === commitmentId ? { ...c, ...updates } : c))
+    );
+
+    try {
+      await api.updateCommitment(commitmentId, updates);
+    } catch {}
+  };
+
+  const deleteCommitment = async (commitmentId: string) => {
+    setCommitments((prev) => prev.filter((c) => c.id !== commitmentId));
+
+    try {
+      await api.deleteCommitment(commitmentId);
+    } catch {}
+  };
+
+  const reassignCommitment = async (commitmentId: string, newResponsibleId: string, justification: string) => {
+    const targetUser = users.find((u) => u.id === newResponsibleId);
+    const existingCom = commitments.find((c) => c.id === commitmentId);
+    if (!existingCom) return;
+
+    const newResponsibleName = targetUser?.name || 'Nuevo Responsable';
+    const newResponsibleEmail = targetUser?.email || existingCom.responsibleEmail;
+
+    const record = {
+      id: `reassign-${Date.now()}`,
+      previousResponsibleId: existingCom.responsibleId,
+      previousResponsibleName: existingCom.responsibleName,
+      newResponsibleId,
+      newResponsibleName,
+      newResponsibleEmail,
+      reassignedBy: currentUser.name,
+      reassignedAt: new Date().toISOString(),
+      justification,
+    };
+
+    setCommitments((prev) =>
+      prev.map((c) => {
+        if (c.id === commitmentId) {
+          const history = [...(c.reassignmentHistory || []), record];
+          return {
+            ...c,
+            responsibleId: newResponsibleId,
+            responsibleName: newResponsibleName,
+            responsibleEmail: newResponsibleEmail,
+            reassignmentHistory: history,
+          };
+        }
+        return c;
+      })
+    );
+
+    const notif: InstitutionalNotification = {
+      id: `notif-${Date.now()}`,
+      type: 'compromiso',
+      title: `Compromiso Reasignado: ${existingCom.title}`,
+      message: `Se le ha reasignado formalmente el compromiso '${existingCom.title}' de acta ${existingCom.meetingCode}. Motivo: ${justification}`,
+      date: new Date().toISOString().slice(0, 10),
+      read: false,
+      recipientEmail: newResponsibleEmail,
+    };
+    setNotifications((prev) => [notif, ...prev]);
+
+    try {
+      await api.reassignCommitment(commitmentId, {
+        newResponsibleId,
+        newResponsibleName,
+        newResponsibleEmail,
+        justification,
+      });
+    } catch {}
   };
 
   const submitCommitmentEvidence = async (
@@ -1687,6 +1775,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setActiveMeetingId,
         createMeeting,
         updateMeeting,
+        deleteMeeting,
         addAgendaItem,
         updateAgendaItem,
         deleteAgendaItem,
@@ -1698,6 +1787,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         finalizeMotion,
         commitments,
         createCommitment,
+        updateCommitment,
+        deleteCommitment,
+        reassignCommitment,
         submitCommitmentEvidence,
         auditCommitment,
         sendCommitmentDeadlineAlert,

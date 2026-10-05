@@ -235,6 +235,7 @@ export const api = {
   getMeetings: () => request<Meeting[]>('/meetings'),
   createMeeting: (data: Partial<Meeting>) => request<Meeting>('/meetings', { method: 'POST', body: JSON.stringify(data) }),
   updateMeeting: (id: string, data: Partial<Meeting>) => request<Meeting>(`/meetings/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteMeeting: (id: string) => request<{ success: boolean; message: string }>(`/meetings/${id}`, { method: 'DELETE' }),
   addAgendaItem: (meetingId: string, item: any) => request<Meeting>(`/meetings/${meetingId}/agenda`, { method: 'POST', body: JSON.stringify(item) }),
   updateAgendaItem: (meetingId: string, itemId: string, item: any) => request<Meeting>(`/meetings/${meetingId}/agenda/${itemId}`, { method: 'PUT', body: JSON.stringify(item) }),
   deleteAgendaItem: (meetingId: string, itemId: string) => request<Meeting>(`/meetings/${meetingId}/agenda/${itemId}`, { method: 'DELETE' }),
@@ -250,6 +251,9 @@ export const api = {
   // Commitments
   getCommitments: () => request<Commitment[]>('/commitments'),
   createCommitment: (data: Partial<Commitment>) => request<Commitment>('/commitments', { method: 'POST', body: JSON.stringify(data) }),
+  updateCommitment: (id: string, data: Partial<Commitment>) => request<Commitment>(`/commitments/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteCommitment: (id: string) => request<{ success: boolean; message: string }>(`/commitments/${id}`, { method: 'DELETE' }),
+  reassignCommitment: (id: string, data: { newResponsibleId: string; newResponsibleName: string; newResponsibleEmail: string; justification: string }) => request<{ success: boolean; commitment: Commitment; message: string }>(`/commitments/${id}/reassign`, { method: 'POST', body: JSON.stringify(data) }),
   submitEvidence: (id: string, data: { description: string; driveUrl: string; fileName?: string }) => request<Commitment>(`/commitments/${id}/evidence`, { method: 'POST', body: JSON.stringify(data) }),
   auditCommitment: (id: string, newStatus: string, notes: string) => request<Commitment>(`/commitments/${id}/audit`, { method: 'POST', body: JSON.stringify({ newStatus, notes }) }),
   sendCommitmentAlert: (id: string) => request<{ success: boolean; commitment: Commitment; message: string }>(`/commitments/${id}/alert`, { method: 'POST' }),

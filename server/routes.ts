@@ -28,6 +28,7 @@ import {
   Estamento,
   CustomRole,
   AcademicProgram,
+  ReassignmentRecord,
 } from './types';
 
 import {
@@ -598,21 +599,48 @@ router.post('/meetings', requireAuth, requireRoles(['presidente']), (req: Authen
   res.status(201).json(newMeeting);
 });
 
-router.put('/meetings/:id', requireAuth, requireRoles(['presidente']), (req: AuthenticatedRequest, res: Response) => {
+router.put('/meetings/:id', requireAuth, requireRoles(['presidente', 'super_admin']), (req: AuthenticatedRequest, res: Response) => {
   const existing = db.getMeetingById(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Reunión no encontrada.' });
 
-  if (existing.status === 'cerrada') {
+  if (existing.status === 'cerrada' && req.user!.role !== 'super_admin') {
     res.status(403).json({
       error: 'MEETING_CLOSED_IMMUTABLE',
-      message: 'El acta se encuentra formalmente cerrada y sellada criptográficamente. Es inmutable.',
+      message: 'El acta se encuentra formalmente cerrada y sellada criptográficamente. Solo el Superadministrador puede realizar enmiendas.',
     });
     return;
   }
 
   const updated = db.updateMeeting(req.params.id, req.body);
+  db.logAudit({
+    userId: req.user!.id,
+    userName: req.user!.name,
+    userRole: req.user!.role,
+    action: 'UPDATE_MEETING',
+    resource: `/api/meetings/${req.params.id}`,
+    details: `Actualización de acta/sesión ${existing.code}`,
+    ipAddress: req.clientIp,
+  });
   wsHub.broadcast('meeting:updated', updated, req.user!.id);
   res.json(updated);
+});
+
+router.delete('/meetings/:id', requireAuth, requireRoles(['super_admin']), (req: AuthenticatedRequest, res: Response) => {
+  const existing = db.getMeetingById(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Reunión no encontrada.' });
+
+  db.deleteMeeting(req.params.id);
+  db.logAudit({
+    userId: req.user!.id,
+    userName: req.user!.name,
+    userRole: req.user!.role,
+    action: 'DELETE_MEETING',
+    resource: `/api/meetings/${req.params.id}`,
+    details: `Eliminación de acta/sesión ${existing.code} (${existing.title}) por Superadministrador`,
+    ipAddress: req.clientIp,
+  });
+  wsHub.broadcast('meeting:deleted', { id: req.params.id, code: existing.code }, req.user!.id);
+  res.json({ success: true, message: `Acta ${existing.code} eliminada exitosamente.` });
 });
 
 // Citations dispatch
@@ -940,6 +968,102 @@ router.post('/commitments', requireAuth, requireRoles(['presidente', 'seguimient
   wsHub.broadcast('notification:new', notif);
 
   res.status(201).json(newCommitment);
+});
+
+// Update Commitment (Superadmin, Seguimiento, Presidente)
+router.put('/commitments/:id', requireAuth, requireRoles(['super_admin', 'seguimiento', 'presidente']), (req: AuthenticatedRequest, res: Response) => {
+  const com = db.getCommitmentById(req.params.id);
+  if (!com) return res.status(404).json({ error: 'Compromiso no encontrado.' });
+
+  const updated = db.updateCommitment(req.params.id, req.body);
+  db.logAudit({
+    userId: req.user!.id,
+    userName: req.user!.name,
+    userRole: req.user!.role,
+    action: 'UPDATE_COMMITMENT',
+    resource: `/api/commitments/${req.params.id}`,
+    details: `Modificación de compromiso '${com.title}'`,
+    ipAddress: req.clientIp,
+  });
+  wsHub.broadcast('commitment:updated', updated, req.user!.id);
+  res.json(updated);
+});
+
+// Delete Commitment (Superadmin exclusive)
+router.delete('/commitments/:id', requireAuth, requireRoles(['super_admin']), (req: AuthenticatedRequest, res: Response) => {
+  const com = db.getCommitmentById(req.params.id);
+  if (!com) return res.status(404).json({ error: 'Compromiso no encontrado.' });
+
+  db.deleteCommitment(req.params.id);
+  db.logAudit({
+    userId: req.user!.id,
+    userName: req.user!.name,
+    userRole: req.user!.role,
+    action: 'DELETE_COMMITMENT',
+    resource: `/api/commitments/${req.params.id}`,
+    details: `Eliminación de compromiso '${com.title}' (${com.meetingCode}) por Superadministrador`,
+    ipAddress: req.clientIp,
+  });
+  wsHub.broadcast('commitment:deleted', { id: req.params.id, title: com.title }, req.user!.id);
+  res.json({ success: true, message: `Compromiso '${com.title}' eliminado exitosamente.` });
+});
+
+// Reassign Commitment (Superadmin, Seguimiento, Presidente)
+router.post('/commitments/:id/reassign', requireAuth, requireRoles(['super_admin', 'seguimiento', 'presidente']), (req: AuthenticatedRequest, res: Response) => {
+  const com = db.getCommitmentById(req.params.id);
+  if (!com) return res.status(404).json({ error: 'Compromiso no encontrado.' });
+
+  const { newResponsibleId, newResponsibleName, newResponsibleEmail, justification } = req.body;
+  if (!newResponsibleId || !newResponsibleName || !justification) {
+    return res.status(400).json({ error: 'Faltan datos de reasignación (nuevo responsable o justificación).' });
+  }
+
+  const reassignmentRecord: ReassignmentRecord = {
+    id: `reassign-${Date.now()}`,
+    previousResponsibleId: com.responsibleId,
+    previousResponsibleName: com.responsibleName,
+    newResponsibleId,
+    newResponsibleName,
+    newResponsibleEmail: newResponsibleEmail || '',
+    reassignedBy: req.user!.name,
+    reassignedAt: new Date().toISOString(),
+    justification,
+  };
+
+  const updatedHistory = [...(com.reassignmentHistory || []), reassignmentRecord];
+  const updatedCom = db.updateCommitment(com.id, {
+    responsibleId: newResponsibleId,
+    responsibleName: newResponsibleName,
+    responsibleEmail: newResponsibleEmail || com.responsibleEmail,
+    reassignmentHistory: updatedHistory,
+  });
+
+  const notif: InstitutionalNotification = {
+    id: `notif-${Date.now()}`,
+    title: `Compromiso Reasignado: ${com.title}`,
+    message: `Se le ha reasignado formalmente el compromiso '${com.title}' (Acta ${com.meetingCode}). Motivo: ${justification}`,
+    date: new Date().toISOString().slice(0, 10),
+    read: false,
+    recipientEmail: newResponsibleEmail || com.responsibleEmail,
+    recipientRoles: ['miembro', 'seguimiento', 'presidente'],
+    type: 'compromiso',
+  };
+  db.addNotification(notif);
+
+  db.logAudit({
+    userId: req.user!.id,
+    userName: req.user!.name,
+    userRole: req.user!.role,
+    action: 'REASSIGN_COMMITMENT',
+    resource: `/api/commitments/${req.params.id}/reassign`,
+    details: `Reasignación de compromiso '${com.title}' de ${com.responsibleName} a ${newResponsibleName}. Justificación: ${justification}`,
+    ipAddress: req.clientIp,
+  });
+
+  wsHub.broadcast('commitment:reassigned', { commitment: updatedCom, reassignment: reassignmentRecord }, req.user!.id);
+  wsHub.broadcast('notification:new', notif);
+
+  res.json({ success: true, commitment: updatedCom, message: `Compromiso reasignado exitosamente a ${newResponsibleName}.` });
 });
 
 // Evidence Submission

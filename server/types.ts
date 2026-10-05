@@ -176,6 +176,18 @@ export interface CommitmentEvidence {
   fileName?: string;
 }
 
+export interface ReassignmentRecord {
+  id: string;
+  previousResponsibleId: string;
+  previousResponsibleName: string;
+  newResponsibleId: string;
+  newResponsibleName: string;
+  newResponsibleEmail: string;
+  reassignedBy: string;
+  reassignedAt: string;
+  justification: string;
+}
+
 export interface Commitment {
   id: string;
   meetingId: string;
@@ -200,6 +212,7 @@ export interface Commitment {
   reminderCount?: number;
   programId?: string;
   programName?: string;
+  reassignmentHistory?: ReassignmentRecord[];
 }
 
 export interface QualityAspect {
@@ -222,7 +235,7 @@ export interface QualityFactor {
   code: string;
   name: string;
   description: string;
-  framework: 'CNA' | 'ABET' | 'Institucional';
+  framework: 'INSTITUCIONAL' | 'AUTOEVALUACION' | 'PROGRAMA' | 'CNA' | 'ABET' | 'Institucional' | string;
   features: QualityFeature[];
 }
 
