@@ -21,6 +21,7 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { ExportActaPdfModal } from './ExportActaPdfModal';
+import { VirtualMeetingLink } from './VirtualMeetingLink';
 
 interface ModuleAProps {
   onGoToLiveMeeting: (meetingId: string) => void;
@@ -330,9 +331,9 @@ export const ModuleA_Meetings: React.FC<ModuleAProps> = ({ onGoToLiveMeeting }) 
                         <Clock className="h-3 w-3 shrink-0 text-slate-400" />
                         <span>{meeting.startTime} - {meeting.endTime}</span>
                       </div>
-                      <div className="col-span-2 flex items-center gap-1.5 truncate">
+                      <div className="col-span-2 flex items-center gap-1.5 min-w-0">
                         <MapPin className="h-3 w-3 shrink-0 text-slate-400" />
-                        <span className="truncate">{meeting.locationOrUrl}</span>
+                        <VirtualMeetingLink locationText={meeting.locationOrUrl} />
                       </div>
                     </div>
 
@@ -385,9 +386,10 @@ export const ModuleA_Meetings: React.FC<ModuleAProps> = ({ onGoToLiveMeeting }) 
                   <span className="flex items-center gap-1">
                     <Clock className="h-3.5 w-3.5 text-slate-400" /> {selectedMeeting.startTime} - {selectedMeeting.endTime}
                   </span>
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5 text-slate-400" /> {selectedMeeting.locationOrUrl}
-                  </span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                    <VirtualMeetingLink locationText={selectedMeeting.locationOrUrl} showButton={true} />
+                  </div>
                 </div>
               </div>
 
@@ -891,7 +893,7 @@ export const ModuleA_Meetings: React.FC<ModuleAProps> = ({ onGoToLiveMeeting }) 
                     <ul className="list-disc pl-5 space-y-1 text-slate-800">
                       <li><strong>Programa Académico:</strong> {selectedMeeting.programName || 'Ingeniería Mecánica'} ({selectedMeeting.programCode || 'ING-MEC'})</li>
                       <li><strong>Fecha:</strong> {selectedMeeting.date} ({selectedMeeting.startTime} a {selectedMeeting.endTime})</li>
-                      <li><strong>Lugar / Enlace:</strong> {selectedMeeting.locationOrUrl}</li>
+                      <li className="flex items-center gap-1.5 flex-wrap"><strong>Lugar / Enlace:</strong> <VirtualMeetingLink locationText={selectedMeeting.locationOrUrl} showButton={true} /></li>
                       <li><strong>Puntos del Orden del Día:</strong> {selectedMeeting.agendaItems.length} puntos programados.</li>
                     </ul>
                     <p>Se solicita puntualidad para verificar el quórum reglamentario del comité.</p>

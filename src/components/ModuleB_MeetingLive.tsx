@@ -23,6 +23,7 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { ExportActaPdfModal } from './ExportActaPdfModal';
+import { VirtualMeetingLink } from './VirtualMeetingLink';
 
 export const ModuleB_MeetingLive: React.FC = () => {
   const { 
@@ -219,7 +220,7 @@ export const ModuleB_MeetingLive: React.FC = () => {
           <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-500">
             <span>{meeting.date} ({meeting.startTime} - {meeting.endTime})</span>
             <span>·</span>
-            <span className="truncate max-w-sm">{meeting.locationOrUrl}</span>
+            <VirtualMeetingLink locationText={meeting.locationOrUrl} showButton={true} />
             <span>·</span>
             <span className="font-medium text-slate-700">
               Quórum Verificado: {meeting.attendees.filter(a => a.present).length} / {meeting.attendees.length} miembros presentes

@@ -21,6 +21,8 @@ import {
   Lock
 } from 'lucide-react';
 
+import { VirtualMeetingLink } from './VirtualMeetingLink';
+
 interface ExportActaPdfModalProps {
   meeting: Meeting;
   motions: Motion[];
@@ -243,7 +245,7 @@ export const ExportActaPdfModal: React.FC<ExportActaPdfModalProps> = ({
               </div>
               <div>
                 <span className="text-slate-500 block">Lugar / Enlace:</span>
-                <strong className="font-semibold text-slate-900 truncate block">{meeting.locationOrUrl}</strong>
+                <VirtualMeetingLink locationText={meeting.locationOrUrl} showButton={true} />
               </div>
             </div>
           </div>
