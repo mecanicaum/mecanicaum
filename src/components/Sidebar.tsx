@@ -18,7 +18,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) => {
-  const { currentUser, commitments, logout } = useApp();
+  const { currentUser, commitments, logout, activeProgramId, programa_activo, programas_asignados } = useApp();
 
   // Commitments counter for current user or tracking
   const userPendingCommitments = commitments.filter((c) => {
@@ -58,7 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
     {
       id: 'modulo_d',
       label: 'D. Gestor de autoevaluación',
-      sublabel: 'CNA/ABET y mapeo de evidencias',
+      sublabel: 'Autoevaluación y evidencias de calidad',
       icon: Award,
       roles: ['super_admin', 'presidente', 'autoevaluacion', 'seguimiento'],
     },
@@ -116,19 +116,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
               {currentUser.role === 'presidente' && 'Presidencia'}
               {currentUser.role === 'miembro' && 'Voz y voto'}
               {currentUser.role === 'seguimiento' && 'Auditoría'}
-              {currentUser.role === 'autoevaluacion' && 'Acreditación'}
+              {currentUser.role === 'autoevaluacion' && 'Autoevaluación'}
               {currentUser.role === 'invitado_externo' && 'Solo tareas'}
             </span>
           </div>
 
-          {currentUser.programIds && currentUser.programIds.length > 0 && (
-            <div className="mt-2 pt-1.5 border-t border-[#E2E8F0] flex items-center justify-between text-[10px]">
-              <span className="text-[#4A5568]">Programas adscritos:</span>
-              <span className="font-mono font-bold text-[#006A4E] bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
-                {currentUser.programIds.length} comités
+          {/* Programa Activo & Programas Asignados */}
+          <div className="mt-2.5 pt-2 border-t border-[#E2E8F0] space-y-1.5 text-[10px]">
+            <div className="flex items-center justify-between">
+              <span className="text-[#4A5568] font-medium">Programa activo:</span>
+              <span className="font-mono font-bold text-[#006837] bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 truncate max-w-[110px]" title={activeProgramId === 'all' ? 'Todos los Programas' : programa_activo?.name || 'Programa'}>
+                {activeProgramId === 'all' ? 'Facultad (Todos)' : programa_activo?.code || 'ING-MEC'}
               </span>
             </div>
-          )}
+            {programas_asignados && programas_asignados.length > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-[#4A5568]">Adscripciones:</span>
+                <span className="font-semibold text-slate-700">
+                  {programas_asignados.length} comité(s)
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Navigation Modules */}

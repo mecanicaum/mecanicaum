@@ -167,7 +167,7 @@ export const ModuleE_Dashboard: React.FC = () => {
             Indicadores de Desempeño y Estado Multiprograma
           </h1>
           <p className="text-xs text-slate-600 mt-1 max-w-2xl">
-            Monitoreo en tiempo real del cumplimiento de compromisos, sesiones de comité ejecutadas y evidencias de autoevaluación acreditables ante CNA/ABET.
+            Monitoreo en tiempo real del cumplimiento de compromisos, sesiones de comité ejecutadas y evidencias del proceso de autoevaluación curricular y calidad académica.
           </p>
         </div>
 
@@ -286,10 +286,10 @@ export const ModuleE_Dashboard: React.FC = () => {
           </p>
         </div>
 
-        {/* KPI 4: Evidencias de Acreditación Mapeadas */}
+        {/* KPI 4: Evidencias de Autoevaluación Mapeadas */}
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
           <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-            <span>Evidencias CNA / ABET</span>
+            <span>Evidencias de Autoevaluación</span>
             <Award className="h-4 w-4 text-purple-600" />
           </div>
           <div className="mt-3 flex items-baseline justify-between">
@@ -301,7 +301,7 @@ export const ModuleE_Dashboard: React.FC = () => {
             </span>
           </div>
           <p className="mt-3 text-[11px] text-slate-500">
-            Fragmentos de actas indexados para acreditación.
+            Fragmentos de actas indexados para el proceso de autoevaluación.
           </p>
         </div>
       </div>
@@ -335,7 +335,7 @@ export const ModuleE_Dashboard: React.FC = () => {
                 <th className="py-2.5 px-4 text-center">Sesiones</th>
                 <th className="py-2.5 px-4 text-center">Compromisos</th>
                 <th className="py-2.5 px-4 text-center">Cumplimiento %</th>
-                <th className="py-2.5 px-4 text-center">Mapeo CNA/ABET</th>
+                <th className="py-2.5 px-4 text-center">Mapeo Autoevaluación</th>
                 <th className="py-2.5 px-4 text-right">Acción</th>
               </tr>
             </thead>
@@ -514,7 +514,7 @@ export const ModuleE_Dashboard: React.FC = () => {
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-              Evidencias por Factor CNA / ABET
+              Evidencias por Factor de Autoevaluación
             </h3>
             <span className="text-xs text-purple-700 font-mono font-semibold">
               {scopedQualityMappings.length} Registros

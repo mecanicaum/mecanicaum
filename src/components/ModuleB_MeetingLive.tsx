@@ -903,7 +903,7 @@ export const ModuleB_MeetingLive: React.FC = () => {
                   onChange={(e) => setComPriority(e.target.value as any)}
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900"
                 >
-                  <option value="alta">Alta (Crítica para Acreditación)</option>
+                  <option value="alta">Alta (Prioridad Curricular)</option>
                   <option value="media">Media (Gestión Ordinaria)</option>
                   <option value="baja">Baja (Informativa)</option>
                 </select>
@@ -969,7 +969,7 @@ export const ModuleB_MeetingLive: React.FC = () => {
                 <li>Se congelará la edición de deliberaciones y acuerdos del orden del día.</li>
                 <li>Se registrará su firma digital institucional con token de trazabilidad.</li>
                 <li>
-                  <strong>El acta pasará automáticamente al estado "Cerrada/Finalizada"</strong>, permitiendo al Gestor de Autoevaluación iniciar el mapeo con los factores e indicadores de acreditación CNA/ABET.
+                  <strong>El acta pasará automáticamente al estado "Cerrada/Finalizada"</strong>, permitiendo al Gestor de Autoevaluación iniciar el mapeo con los factores del proceso de autoevaluación y calidad.
                 </li>
               </ul>
 

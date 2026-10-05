@@ -173,8 +173,8 @@ export const INITIAL_CUSTOM_ROLES: CustomRole[] = [
   {
     id: 'rol-auto',
     code: 'GESTOR_CALIDAD',
-    name: 'Gestor de Autoevaluación y Acreditación',
-    description: 'Gestiona nomenclaturas de calidad CNA/ABET, mapea fragmentos de actas cerradas y audita evidencias.',
+    name: 'Gestor de Autoevaluación y Calidad Curricular',
+    description: 'Gestiona nomenclaturas de calidad y autoevaluación, mapea acuerdos de actas y custodia evidencias.',
     baseCapability: 'autoevaluacion',
     canVote: false,
     canSign: false,
@@ -212,13 +212,14 @@ export const INITIAL_USERS: User[] = [
     avatarInitials: 'SA',
     hasVote: true,
     periodo: '2026 - 2028',
-    active: true,
     programIds: ['prog-mec', 'prog-sis', 'prog-civ', 'prog-tec-elec'],
     primaryProgramId: 'prog-mec',
+    programas_asignados: ['prog-mec', 'prog-sis', 'prog-civ', 'prog-tec-elec'],
+    programa_activo: 'prog-mec',
   },
 ];
 
-// Plantilla opcional de acreditación CNA y ABET
+// Plantilla institucional de referencia para el proceso de autoevaluación curricular
 export const CNA_ABET_TEMPLATE_FACTORS: QualityFactor[] = [
   {
     id: 'fact-1',

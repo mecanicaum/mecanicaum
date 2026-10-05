@@ -416,7 +416,7 @@ export const PublicActVerificationView: React.FC<PublicActVerificationViewProps>
             {/* Legal validity footer */}
             <div className="mt-8 pt-4 border-t border-[#E2E8F0] text-center text-[10px] text-[#4A5568] leading-relaxed">
               Verificación generada por el Sistema Integrado de Gestión Curricular (SIG-Currículo) de la Institución Universitaria Mayor de Cartagena.
-              Válido como constancia probatoria ante el Consejo Nacional de Acreditación (CNA) de Colombia y pares evaluadores ABET.
+              Válido como constancia probatoria institucional y soporte documental para el proceso de autoevaluación y registro calificado.
             </div>
           </div>
         ) : (

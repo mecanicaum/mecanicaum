@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import {
   User,
   UserRole,
@@ -103,7 +103,12 @@ interface AppContextType {
   programs: AcademicProgram[];
   activeProgramId: string; // 'all' or specific program ID (e.g. 'prog-mec')
   activeProgram: AcademicProgram | null;
+  programas_asignados: AcademicProgram[]; // Programas académicos adscritos al perfil del usuario
+  programa_activo: AcademicProgram | null; // Programa académico actualmente seleccionado
   setActiveProgramId: (programId: string) => void;
+  switchProgram: (programId: string) => void; // Conmutador rápido de programa activo
+  filteredMeetings: Meeting[]; // Reuniones filtradas en base al programa seleccionado
+  filteredCommitments: Commitment[]; // Compromisos filtrados en base al programa seleccionado
   createProgram: (newProgramData: Omit<AcademicProgram, 'id' | 'createdAt'>) => Promise<AcademicProgram>;
   updateProgram: (id: string, updates: Partial<AcademicProgram>) => Promise<void>;
   deleteProgram: (id: string) => Promise<void>;
@@ -206,17 +211,69 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Synchronized LocalStorage State via useLocalStorage Hook
   const [programs, setPrograms] = useLocalStorage<AcademicProgram[]>('sigc_programs', INITIAL_PROGRAMS);
-  const [activeProgramId, setActiveProgramId] = useLocalStorage<string>('sigc_active_program_id', 'prog-mec');
+  const [activeProgramId, setActiveProgramIdState] = useLocalStorage<string>('sigc_active_program_id', 'prog-mec');
   const activeProgram = programs.find((p) => p.id === activeProgramId) || null;
 
   const [users, setUsers] = useLocalStorage<User[]>('users', INITIAL_USERS);
   const [currentUser, setCurrentUser] = useLocalStorage<User>('current_user', INITIAL_USERS[0]);
+
+  // Programas académicos asignados al perfil del usuario autenticado
+  const userAssignedPrograms: AcademicProgram[] = useMemo(() => {
+    if (currentUser.role === 'super_admin') {
+      return programs;
+    }
+    const ids = currentUser.programas_asignados || currentUser.programIds || [currentUser.primaryProgramId || 'prog-mec'];
+    return programs.filter((p) => ids.includes(p.id));
+  }, [currentUser, programs]);
+
+  // Perfil del usuario enriquecido con 'programas_asignados' y 'programa_activo'
+  const enrichedCurrentUser: User = useMemo(() => {
+    const rawAssigned = currentUser.programas_asignados || currentUser.programIds || (currentUser.role === 'super_admin' ? programs.map((p) => p.id) : ['prog-mec']);
+    const rawActive = activeProgramId !== 'all' ? activeProgramId : (currentUser.programa_activo || currentUser.primaryProgramId || rawAssigned[0] || 'prog-mec');
+    return {
+      ...currentUser,
+      programIds: rawAssigned,
+      primaryProgramId: rawActive,
+      programas_asignados: rawAssigned,
+      programa_activo: rawActive,
+    };
+  }, [currentUser, programs, activeProgramId]);
+
+  const setActiveProgramId = useCallback((programId: string) => {
+    setActiveProgramIdState(programId);
+    setCurrentUser((prev) => ({
+      ...prev,
+      programa_activo: programId,
+      primaryProgramId: programId !== 'all' ? programId : prev.primaryProgramId,
+    }));
+  }, [setActiveProgramIdState, setCurrentUser]);
+
+  const switchProgram = useCallback((programId: string) => {
+    setActiveProgramId(programId);
+  }, [setActiveProgramId]);
+
   const [estamentos, setEstamentos] = useLocalStorage<Estamento[]>('estamentos', INITIAL_ESTAMENTOS);
   const [customRoles, setCustomRoles] = useLocalStorage<CustomRole[]>('custom_roles', INITIAL_CUSTOM_ROLES);
   const [meetings, setMeetings] = useLocalStorage<Meeting[]>('meetings', INITIAL_MEETINGS);
   const [activeMeetingId, setActiveMeetingId] = useLocalStorage<string>('active_meeting_id', INITIAL_MEETINGS[0]?.id || '');
   const [motions, setMotions] = useLocalStorage<Motion[]>('motions', INITIAL_MOTIONS);
   const [commitments, setCommitments] = useLocalStorage<Commitment[]>('commitments', INITIAL_COMMITMENTS);
+
+  // Reuniones filtradas automáticamente en base al programa seleccionado (o todas si es 'all')
+  const filteredMeetings = useMemo(() => {
+    if (activeProgramId === 'all') {
+      return meetings;
+    }
+    return meetings.filter((m) => m.programId === activeProgramId);
+  }, [meetings, activeProgramId]);
+
+  // Compromisos filtrados automáticamente en base al programa seleccionado (o todos si es 'all')
+  const filteredCommitments = useMemo(() => {
+    if (activeProgramId === 'all') {
+      return commitments;
+    }
+    return commitments.filter((c) => c.programId === activeProgramId);
+  }, [commitments, activeProgramId]);
   const [qualityFactors, setQualityFactors] = useLocalStorage<QualityFactor[]>('quality_factors', CNA_ABET_TEMPLATE_FACTORS);
   const [qualityMappings, setQualityMappings] = useLocalStorage<ActQualityMapping[]>('quality_mappings', INITIAL_QUALITY_MAPPINGS);
   const [accessRequests, setAccessRequests] = useLocalStorage<AccessRequest[]>('access_requests', []);
@@ -424,7 +481,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const switchUser = (userId: string) => {
     const target = users.find((u) => u.id === userId);
     if (target) {
-      setCurrentUser(target);
+      const assigned = target.programas_asignados || target.programIds || (target.role === 'super_admin' ? programs.map((p) => p.id) : ['prog-mec']);
+      const activeProg = target.programa_activo || target.primaryProgramId || (target.role === 'super_admin' ? 'all' : assigned[0] || 'prog-mec');
+      const enriched: User = {
+        ...target,
+        programas_asignados: assigned,
+        programa_activo: activeProg,
+        programIds: assigned,
+        primaryProgramId: activeProg !== 'all' ? activeProg : assigned[0] || 'prog-mec',
+      };
+      setCurrentUser(enriched);
+      if (activeProg && activeProg !== 'all') {
+        setActiveProgramIdState(activeProg);
+      }
       setApiUserId(target.id);
       realtime.identify(target.id);
     }
@@ -489,6 +558,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let activeUser: User;
 
     if (existing) {
+      const assigned = existing.programas_asignados || existing.programIds || (isSuperAdmin ? programs.map((p) => p.id) : ['prog-mec']);
+      const activeProg = existing.programa_activo || existing.primaryProgramId || (isSuperAdmin ? 'all' : assigned[0] || 'prog-mec');
       if (isSuperAdmin) {
         activeUser = {
           ...existing,
@@ -498,12 +569,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           academicTitle: 'Super Administrador / Presidencia Comité Curricular',
           avatarInitials: 'SA',
           hasVote: true,
+          programas_asignados: assigned,
+          programa_activo: activeProg,
+          programIds: assigned,
+          primaryProgramId: activeProg !== 'all' ? activeProg : assigned[0] || 'prog-mec',
         };
         setUsers((prev) => prev.map((u) => (u.id === existing.id ? activeUser : u)));
       } else {
-        activeUser = existing;
+        activeUser = {
+          ...existing,
+          programas_asignados: assigned,
+          programa_activo: activeProg,
+          programIds: assigned,
+          primaryProgramId: activeProg !== 'all' ? activeProg : assigned[0] || 'prog-mec',
+        };
       }
     } else {
+      const assigned = isSuperAdmin ? programs.map((p) => p.id) : ['prog-mec'];
+      const activeProg = isSuperAdmin ? 'all' : 'prog-mec';
       activeUser = {
         id: isSuperAdmin ? 'usr-admin-principal' : session.id,
         name: isSuperAdmin ? 'Super Administrador del Comité Curricular' : session.name,
@@ -518,6 +601,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         hasVote: true,
         periodo: '2026 - 2028',
         active: true,
+        programas_asignados: assigned,
+        programa_activo: activeProg,
+        programIds: assigned,
+        primaryProgramId: activeProg !== 'all' ? activeProg : assigned[0] || 'prog-mec',
       };
       setUsers((prev) => [...prev, activeUser]);
     }
@@ -685,10 +772,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .map((n) => n[0].toUpperCase())
       .join('') || 'DC';
 
+    const assignedIds = userData.programas_asignados || userData.programIds || (userData.primaryProgramId ? [userData.primaryProgramId] : ['prog-mec']);
+    const primaryId = userData.programa_activo || userData.primaryProgramId || assignedIds[0] || 'prog-mec';
+
     const newUser: User = {
       ...userData,
       id: `usr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       avatarInitials: initials,
+      programIds: assignedIds,
+      primaryProgramId: primaryId,
+      programas_asignados: assignedIds,
+      programa_activo: primaryId,
     };
 
     setUsers((prev) => [...prev, newUser]);
@@ -701,9 +795,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateUser = async (id: string, updates: Partial<User>) => {
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...updates } : u)));
+    setUsers((prev) => prev.map((u) => {
+      if (u.id !== id) return u;
+      const merged = { ...u, ...updates };
+      if (updates.programas_asignados || updates.programIds) {
+        merged.programIds = updates.programas_asignados || updates.programIds;
+        merged.programas_asignados = updates.programas_asignados || updates.programIds;
+      }
+      if (updates.programa_activo || updates.primaryProgramId) {
+        merged.programa_activo = updates.programa_activo || updates.primaryProgramId;
+        merged.primaryProgramId = updates.programa_activo || updates.primaryProgramId;
+      }
+      return merged;
+    }));
     if (currentUser.id === id) {
-      setCurrentUser((prev) => ({ ...prev, ...updates }));
+      setCurrentUser((prev) => {
+        const merged = { ...prev, ...updates };
+        if (updates.programas_asignados || updates.programIds) {
+          merged.programIds = updates.programas_asignados || updates.programIds;
+          merged.programas_asignados = updates.programas_asignados || updates.programIds;
+        }
+        if (updates.programa_activo || updates.primaryProgramId) {
+          merged.programa_activo = updates.programa_activo || updates.primaryProgramId;
+          merged.primaryProgramId = updates.programa_activo || updates.primaryProgramId;
+        }
+        return merged;
+      });
     }
 
     try {
@@ -1275,7 +1392,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
-  // Quality Factors & CNA / ABET Matrix
+  // Quality Factors & Self-Evaluation Matrix
   const addQualityFactor = async (factor: Omit<QualityFactor, 'id' | 'features'>): Promise<QualityFactor> => {
     const newFactor: QualityFactor = {
       ...factor,
@@ -1531,7 +1648,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider
       value={{
-        currentUser,
+        currentUser: enrichedCurrentUser,
         users,
         switchUser,
         switchRole,
@@ -1545,7 +1662,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         programs,
         activeProgramId,
         activeProgram,
+        programas_asignados: userAssignedPrograms,
+        programa_activo: activeProgram,
         setActiveProgramId,
+        switchProgram,
+        filteredMeetings,
+        filteredCommitments,
         createProgram,
         updateProgram,
         deleteProgram,

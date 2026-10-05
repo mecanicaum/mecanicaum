@@ -202,7 +202,7 @@ const DEFAULT_CUSTOM_ROLES: CustomRole[] = [
     id: 'role-auto-1',
     name: 'Gestor de Autoevaluación & Calidad',
     code: 'GESTOR_CALIDAD',
-    description: 'Indexa acuerdos de actas en factores, características y aspectos para procesos de acreditación CNA y ABET.',
+    description: 'Indexa acuerdos de actas en factores, características y aspectos para el proceso de autoevaluación curricular y calidad institucional.',
     baseRole: 'autoevaluacion',
     canVote: false,
     canSignActs: false,

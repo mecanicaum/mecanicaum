@@ -244,7 +244,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
 
         <div className="hidden xl:block border-l border-white/20 pl-3">
           <span className="text-[10px] bg-[#E59800] text-[#006837] px-2 py-0.5 rounded-md font-heading font-extrabold uppercase tracking-wider block w-fit shadow-xs">
-            Acreditación CNA / ABET
+            Proceso de Autoevaluación
           </span>
         </div>
       </div>
@@ -356,7 +356,7 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
 
                 <button
                   onClick={() => {
-                    if (confirm('¿Restablecer toda la base de datos a los datos iniciales de acreditación CNA/ABET?')) {
+                    if (confirm('¿Restablecer toda la base de datos a los datos iniciales del proceso de autoevaluación y calidad?')) {
                       resetDatabaseToDefaults();
                       setShowDbMenu(false);
                     }

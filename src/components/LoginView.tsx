@@ -128,20 +128,20 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onOpenVeri
               Portal Oficial de Gestión Curricular
             </div>
             <h1 className="text-2xl sm:text-3xl font-heading font-black text-white tracking-tight leading-tight uppercase">
-              Acreditación y Decisiones en Tiempo Real
+              Autoevaluación y Decisiones en Tiempo Real
             </h1>
             <p className="text-xs sm:text-sm text-slate-100 leading-relaxed font-sans">
-              Plataforma institucional para el desarrollo de sesiones colegiadas, votaciones con sellado criptográfico, control de compromisos y matriz de calidad CNA / ABET.
+              Plataforma institucional para el desarrollo de sesiones colegiadas, votaciones con sellado criptográfico, control de compromisos y matriz de autoevaluación curricular continua.
             </p>
           </div>
 
-          {/* Value Props & Accreditation Badges */}
+          {/* Value Props & Self-evaluation Badges */}
           <div className="space-y-2.5 pt-1">
             <div className="flex items-start gap-3 bg-white/10 border border-white/15 rounded-xl p-3 shadow-xs">
               <GraduationCap className="h-5 w-5 text-[#E58A13] shrink-0 mt-0.5" />
               <div>
-                <h4 className="text-xs font-heading font-bold text-white">Matriz de Acreditación Integrada</h4>
-                <p className="text-[11px] text-slate-200">Indexación automática de acuerdos con los 12 factores CNA y 8 criterios ABET.</p>
+                <h4 className="text-xs font-heading font-bold text-white">Matriz de Autoevaluación Curricular</h4>
+                <p className="text-[11px] text-slate-200">Indexación automática de acuerdos con factores de calidad y lineamientos institucionales.</p>
               </div>
             </div>
 

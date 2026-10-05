@@ -681,7 +681,7 @@ export const ModuleA_Meetings: React.FC<ModuleAProps> = ({ onGoToLiveMeeting }) 
                   required
                   value={newMeetingTitle}
                   onChange={(e) => setNewMeetingTitle(e.target.value)}
-                  placeholder="Ej. Sesión Ordinaria - Plan de Mejoramiento CNA y Ajuste de Laboratorios"
+                  placeholder="Ej. Sesión Ordinaria - Plan de Mejoramiento Curricular y Ajuste de Laboratorios"
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900"
                 />
               </div>

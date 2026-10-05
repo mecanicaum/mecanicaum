@@ -231,10 +231,10 @@ export const ModuleD_SelfEvaluation: React.FC = () => {
             Módulo D · Aseguramiento de la Calidad
           </span>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 mt-0.5">
-            Gestor de Autoevaluación & Acreditación de Calidad
+            Gestor de Autoevaluación & Calidad Curricular
           </h1>
           <p className="text-xs text-slate-600 mt-1 max-w-2xl">
-            Bandeja de actas finalizadas, administración de la estructura jerárquica (Factor &gt; Característica &gt; Aspecto), etiquetado de acuerdos y matriz de auditoría para pares CNA / ABET.
+            Bandeja de actas finalizadas, administración de la estructura jerárquica (Factor &gt; Característica &gt; Aspecto), etiquetado de acuerdos y matriz de evidencias para autoevaluación institucional.
           </p>
         </div>
 
@@ -435,7 +435,7 @@ export const ModuleD_SelfEvaluation: React.FC = () => {
                                         </span>
                                       </div>
                                       <p className="text-slate-600 text-[10px] mt-0.5">
-                                        <strong>Justificación CNA:</strong> {map.evidentialContribution}
+                                        <strong>Justificación de Autoevaluación:</strong> {map.evidentialContribution}
                                       </p>
                                     </div>
 
@@ -473,7 +473,7 @@ export const ModuleD_SelfEvaluation: React.FC = () => {
                 Estructura de Nomenclaturas de Autoevaluación
               </h3>
               <p className="text-xs text-slate-500">
-                Jerarquía estricta de 3 niveles: Factor &gt; Característica &gt; Aspecto para acreditación CNA y ABET.
+                Jerarquía estricta de 3 niveles: Factor &gt; Característica &gt; Aspecto para el proceso de autoevaluación continua.
               </p>
             </div>
 
@@ -502,10 +502,10 @@ export const ModuleD_SelfEvaluation: React.FC = () => {
                   <button
                     onClick={loadCnaAbetTemplate}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-xs font-semibold text-purple-800 hover:bg-purple-100"
-                    title="Cargar estructura de referencia CNA y ABET"
+                    title="Cargar estructura de referencia de autoevaluación"
                   >
                     <Sparkles className="h-3.5 w-3.5 text-purple-600" />
-                    Cargar Plantilla CNA / ABET
+                    Cargar Factores de Autoevaluación
                   </button>
                 ) : (
                   <button
@@ -536,7 +536,7 @@ export const ModuleD_SelfEvaluation: React.FC = () => {
                   Catálogo de Nomenclaturas Vacío
                 </h3>
                 <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-                  No hay nomenclaturas de calidad configuradas. Como Gestor de Autoevaluación, puede crear la estructura jerárquica de su programa (<strong>Factor &gt; Característica &gt; Aspecto</strong>) o cargar la plantilla estándar de referencia CNA / ABET.
+                  No hay nomenclaturas de calidad configuradas. Como Gestor de Autoevaluación, puede crear la estructura jerárquica de su programa (<strong>Factor &gt; Característica &gt; Aspecto</strong>) o cargar la plantilla estándar de referencia institucional.
                 </p>
                 {isEvaluator && (
                   <div className="flex items-center justify-center gap-3 pt-2">
@@ -552,7 +552,7 @@ export const ModuleD_SelfEvaluation: React.FC = () => {
                       className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs"
                     >
                       <Sparkles className="h-3.5 w-3.5 text-purple-600" />
-                      Cargar Plantilla CNA / ABET
+                      Cargar Factores de Autoevaluación
                     </button>
                   </div>
                 )}
@@ -678,7 +678,7 @@ export const ModuleD_SelfEvaluation: React.FC = () => {
                   onChange={(e) => setMatrixFactorFilter(e.target.value)}
                   className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 font-semibold cursor-pointer"
                 >
-                  <option value="all">Todos los Factores de Acreditación</option>
+                  <option value="all">Todos los Factores de Autoevaluación</option>
                   {qualityFactors.map((f) => (
                     <option key={f.id} value={f.code}>
                       {f.code} - {f.name}
@@ -705,10 +705,10 @@ export const ModuleD_SelfEvaluation: React.FC = () => {
             <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                  Matriz de Trazabilidad: Actas del Comité Curricular vs. Acreditación de Calidad
+                  Matriz de Trazabilidad: Actas del Comité Curricular vs. Factores de Autoevaluación
                 </h3>
                 <p className="text-[11px] text-slate-500">
-                  {filteredMatrix.length} evidencias indexadas para presentación ante el Consejo Nacional de Acreditación (CNA) y pares evaluadores ABET.
+                  {filteredMatrix.length} evidencias indexadas para el proceso de autoevaluación y aseguramiento de la calidad académica.
                 </p>
               </div>
 
@@ -728,7 +728,7 @@ export const ModuleD_SelfEvaluation: React.FC = () => {
                     <th className="py-2.5 px-4">Acta / Sesión</th>
                     <th className="py-2.5 px-4">Nomenclatura (Factor &gt; Aspecto)</th>
                     <th className="py-2.5 px-4">Fragmento / Acuerdo del Comité</th>
-                    <th className="py-2.5 px-4">Contribución Evidencial CNA/ABET</th>
+                    <th className="py-2.5 px-4">Contribución Evidencial de Autoevaluación</th>
                     <th className="py-2.5 px-4">Indexado Por</th>
                   </tr>
                 </thead>
@@ -890,7 +890,7 @@ export const ModuleD_SelfEvaluation: React.FC = () => {
 
               <div>
                 <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                  Contribución Evidencial para la Acreditación (Justificación)
+                  Contribución Evidencial para la Autoevaluación (Justificación)
                 </label>
                 <textarea
                   rows={3}

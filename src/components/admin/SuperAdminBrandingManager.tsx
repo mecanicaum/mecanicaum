@@ -167,7 +167,7 @@ export const SuperAdminBrandingManager: React.FC = () => {
             Acceso Reservado a la Identidad Institucional
           </h2>
           <p className="text-xs sm:text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
-            La modificación del logotipo de la aplicación y del banner de inicio del sistema tiene implicaciones estatutarias en las actas colegiadas y en las evidencias para el CNA / ABET. Solo el titular de la cuenta de <strong>Super Administrador</strong> (<code>autoevaluacionycurriculomecanica@umayor.edu.co</code>) posee los privilegios criptográficos para alterar estos activos.
+            La modificación del logotipo de la aplicación y del banner de inicio del sistema tiene implicaciones estatutarias en las actas colegiadas y en las evidencias del proceso de autoevaluación institucional. Solo el titular de la cuenta de <strong>Super Administrador</strong> (<code>autoevaluacionycurriculomecanica@umayor.edu.co</code>) posee los privilegios criptográficos para alterar estos activos.
           </p>
         </div>
 
@@ -448,7 +448,7 @@ export const SuperAdminBrandingManager: React.FC = () => {
                   {bannerType === 'dynamic' && <Check className="h-4 w-4 text-[#006837]" />}
                 </div>
                 <p className="text-[11px] text-slate-500 font-normal">
-                  Diseño institucional con ondas verdes y doradas, roseta CNA/ABET y eslogan editable.
+                  Diseño institucional con ondas verdes y doradas, roseta de calidad y eslogan editable.
                 </p>
               </button>
 
@@ -546,10 +546,10 @@ export const SuperAdminBrandingManager: React.FC = () => {
                 <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
                   <div className="space-y-0.5">
                     <span className="text-xs font-bold text-slate-800">
-                      Roseta de Calidad y Acreditación (Checkmark Dorado)
+                      Roseta de Calidad y Autoevaluación (Checkmark Dorado)
                     </span>
                     <p className="text-[11px] text-slate-500">
-                      Muestra la medalla de verificación en el eslogan para enfatizar los estándares CNA / ABET.
+                      Muestra la medalla de verificación en el eslogan para destacar la autoevaluación curricular.
                     </p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">

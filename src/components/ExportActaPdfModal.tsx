@@ -484,7 +484,7 @@ export const ExportActaPdfModal: React.FC<ExportActaPdfModalProps> = ({
             </div>
 
             <div className="text-center text-[10px] text-slate-400 pt-4 border-t border-slate-200 leading-relaxed">
-              Documento expedido y refrendado electrónicamente bajo el Acuerdo del Consejo Superior de la Institución Universitaria Mayor de Cartagena. Cumple con la Ley 527 de 1999 sobre firmas digitales y validez probatoria plena ante el Consejo Nacional de Acreditación (CNA) y pares evaluadores ABET.
+              Documento expedido y refrendado electrónicamente bajo el Acuerdo del Consejo Superior de la Institución Universitaria Mayor de Cartagena. Cumple con la Ley 527 de 1999 sobre firmas digitales y plena validez probatoria institucional para el proceso de autoevaluación y registro calificado.
             </div>
           </div>
         </div>
@@ -492,7 +492,7 @@ export const ExportActaPdfModal: React.FC<ExportActaPdfModalProps> = ({
         {/* Bottom Floating Bar in Modal */}
         <div className="border-t border-slate-200 bg-slate-50 px-6 py-3 flex items-center justify-between print:hidden shrink-0">
           <span className="text-xs text-slate-500 font-mono">
-            Páginas generadas conforme al estándar de acreditación CNA / ABET
+            Documento estructurado conforme a los estándares de gestión de calidad y autoevaluación
           </span>
 
           <div className="flex items-center gap-2">

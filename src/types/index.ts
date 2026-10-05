@@ -28,6 +28,16 @@ export interface CustomRole {
 }
 
 export type AcademicLevel = 'pregrado' | 'postgrado' | 'tecnologia' | 'maestria' | 'especializacion';
+export type ProgramStatus = 'activo' | 'archivado' | 'en_revision';
+
+export interface CommitteeConfig {
+  minimumQuorum: number; // e.g. 5
+  meetingPeriodicity: 'quincenal' | 'mensual' | 'bimestral';
+  targetSessionsPerSemester: number; // e.g. 8
+  mandatoryEstamentos?: string[]; // IDs de estamentos estatutarios requeridos
+  designatedSecretaryId?: string; // ID del secretario técnico del comité
+  designatedPresidentId?: string; // ID del presidente / coordinador del comité
+}
 
 export interface AcademicProgram {
   id: string;
@@ -36,12 +46,20 @@ export interface AcademicProgram {
   level: AcademicLevel;
   faculty: string; // e.g. "Facultad de Ingeniería"
   sniesCode?: string; // Código SNIES oficial Ministerio de Educación Nacional
+  registroCalificadoResolucion?: string; // e.g. "Resolución MEN N° 012845"
+  registroCalificadoVigencia?: string; // e.g. "7 años (Vence 2031)"
   directorName?: string; // Director(a) o Coordinador(a)
   directorEmail?: string;
   active: boolean;
+  status?: ProgramStatus; // 'activo' | 'archivado' | 'en_revision'
+  archivedAt?: string;
+  archivedBy?: string;
+  archiveReason?: string;
   color?: string; // e.g. "emerald", "blue", "amber", "purple", "indigo", "teal", "rose"
   description?: string;
+  committeeConfig?: CommitteeConfig;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface User {
@@ -64,6 +82,8 @@ export interface User {
   password?: string;
   programIds?: string[]; // IDs de programas de la facultad a los que pertenece
   primaryProgramId?: string; // Programa principal de adscripción
+  programas_asignados?: string[]; // Lista de programas académicos asignados al perfil del usuario
+  programa_activo?: string; // Programa académico activo actualmente seleccionado
 }
 
 export type MeetingType = 'ordinaria' | 'extraordinaria';
@@ -185,7 +205,7 @@ export interface Commitment {
   programName?: string;
 }
 
-// Modelado de Nomenclaturas de Calidad CNA / ABET
+// Modelado de Nomenclaturas de Autoevaluación y Calidad Curricular
 export interface QualityAspect {
   id: string;
   code: string; // e.g. "12.1"

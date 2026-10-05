@@ -25,6 +25,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { SuperAdminBrandingManager } from './admin/SuperAdminBrandingManager';
+import { ProgramaManagement } from './admin/ProgramaManagement';
 
 export const Module_Admin: React.FC = () => {
   const { 
@@ -764,214 +765,7 @@ export const Module_Admin: React.FC = () => {
 
       {/* TAB 2: MÓDULO EXCLUSIVO DEL ADMINISTRADOR PARA CREAR Y GESTIONAR PROGRAMAS DE LA FACULTAD */}
       {activeTab === 'programs' && (
-        <div className="space-y-4">
-          {/* Admin Exclusive Top Banner */}
-          <div className="bg-gradient-to-r from-[#006837] via-[#004D25] to-[#002D15] rounded-xl p-4 text-white shadow-md border border-[#E59800]/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <GraduationCap className="h-5 w-5 text-[#E58A13]" />
-                <h3 className="text-sm font-bold tracking-tight uppercase">
-                  Gestión Exclusiva de Programas Académicos de la Facultad
-                </h3>
-                <span className="text-[9px] bg-[#E58A13] text-slate-950 font-black px-2 py-0.5 rounded-md uppercase">
-                  Control Administrativo
-                </span>
-              </div>
-              <p className="text-xs text-emerald-100/90 max-w-2xl leading-relaxed">
-                Configure los programas de pregrado, posgrado y tecnologías de la Facultad de Ingeniería. Cada programa opera con su propio comité curricular, actas, votaciones nominales y planes de autoevaluación.
-              </p>
-            </div>
-
-            {isAdmin && (
-              <button
-                onClick={openNewProgramModal}
-                className="inline-flex items-center gap-2 bg-[#E58A13] hover:bg-[#d07b0e] text-slate-950 px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-md shrink-0 cursor-pointer"
-              >
-                <Plus className="h-4 w-4" />
-                Crear Nuevo Programa
-              </button>
-            )}
-          </div>
-
-          {/* Search bar & quick stats */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-            <div className="flex items-center gap-3 text-xs text-slate-600">
-              <span className="font-semibold text-slate-900">
-                Total Programas: <strong className="text-[#006837] font-mono text-sm">{programs.length}</strong>
-              </span>
-              <span className="h-4 w-px bg-slate-200" />
-              <span>
-                Activos: <strong className="text-emerald-700">{programs.filter(p => p.active).length}</strong>
-              </span>
-              <span className="h-4 w-px bg-slate-200" />
-              <span>
-                Facultad: <strong>Facultad de Ingeniería</strong>
-              </span>
-            </div>
-
-            <div className="relative min-w-[260px]">
-              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
-              <input
-                type="text"
-                value={programSearch}
-                onChange={(e) => setProgramSearch(e.target.value)}
-                placeholder="Buscar programa por código, nombre, director o SNIES..."
-                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#006837]"
-              />
-            </div>
-          </div>
-
-          {/* Programs Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredPrograms.length === 0 ? (
-              <div className="col-span-2 bg-white rounded-xl border border-slate-200 p-8 text-center text-xs text-slate-400">
-                No se encontraron programas académicos que coincidan con la búsqueda.
-              </div>
-            ) : (
-              filteredPrograms.map((prog) => {
-                // Compute metrics for this program
-                const assignedMembersCount = users.filter((u) => 
-                  (u.programIds && u.programIds.includes(prog.id)) || u.primaryProgramId === prog.id
-                ).length;
-
-                const programMeetingsCount = meetings.filter((m) => m.programId === prog.id).length;
-                const programCommitmentsCount = commitments.filter((c) => c.programId === prog.id).length;
-                const isActiveFilter = activeProgramId === prog.id;
-
-                return (
-                  <div 
-                    key={prog.id}
-                    className={`rounded-xl border bg-white p-4.5 shadow-xs transition-all relative flex flex-col justify-between ${
-                      isActiveFilter 
-                        ? 'border-[#006837] ring-2 ring-[#006837]/20 bg-emerald-50/20' 
-                        : 'border-slate-200 hover:border-slate-300'
-                    }`}
-                  >
-                    <div>
-                      {/* Header of Program Card */}
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span className={`px-2.5 py-1 rounded-lg text-xs font-mono font-black border ${getProgramBadgeClasses(prog.color)}`}>
-                            {prog.code}
-                          </span>
-                          <div className="min-w-0">
-                            <h4 className="font-bold text-sm text-slate-900 leading-snug truncate">
-                              {prog.name}
-                            </h4>
-                            <span className="text-[10px] text-slate-500 font-medium capitalize">
-                              Nivel: {prog.level} · {prog.faculty || 'Facultad de Ingeniería'}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            prog.active 
-                              ? 'bg-emerald-100 text-emerald-800' 
-                              : 'bg-slate-100 text-slate-500'
-                          }`}>
-                            {prog.active ? 'Activo' : 'Inactivo'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* SNIES & Director */}
-                      <div className="mt-3.5 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
-                        <div>
-                          <span className="text-[10px] text-slate-400 font-medium block">Código SNIES (MEN):</span>
-                          <span className="font-mono font-semibold text-slate-800">
-                            {prog.sniesCode || 'En trámite'}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-slate-400 font-medium block">Director / Coordinador:</span>
-                          <span className="font-semibold text-slate-800 truncate block" title={prog.directorName}>
-                            {prog.directorName || 'No asignado'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Description */}
-                      {prog.description && (
-                        <p className="mt-2 text-[11px] text-slate-600 line-clamp-2 leading-relaxed">
-                          {prog.description}
-                        </p>
-                      )}
-
-                      {/* Multiprogram Stats */}
-                      <div className="mt-3.5 grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-150 text-center">
-                        <div>
-                          <span className="text-[10px] text-slate-500 block">Miembros Comité</span>
-                          <span className="font-mono text-xs font-bold text-slate-900">
-                            {assignedMembersCount}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-slate-500 block">Sesiones / Actas</span>
-                          <span className="font-mono text-xs font-bold text-slate-900">
-                            {programMeetingsCount}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-[10px] text-slate-500 block">Compromisos</span>
-                          <span className="font-mono text-xs font-bold text-slate-900">
-                            {programCommitmentsCount}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Footer Actions */}
-                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                      <button
-                        onClick={() => setActiveProgramId(prog.id)}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                          isActiveFilter
-                            ? 'bg-[#006837] text-white font-bold shadow-2xs'
-                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                        }`}
-                        title="Filtrar todo el sistema de actas y compromisos para este programa"
-                      >
-                        <ArrowRight className="h-3 w-3" />
-                        {isActiveFilter ? 'Filtro Actual del Sistema' : 'Filtrar Sistema'}
-                      </button>
-
-                      <div className="flex items-center gap-1">
-                        {isAdmin && (
-                          <>
-                            <button
-                              onClick={() => handleToggleProgramActive(prog)}
-                              className={`p-1.5 rounded text-xs transition-colors cursor-pointer ${
-                                prog.active ? 'text-amber-600 hover:bg-amber-50' : 'text-emerald-600 hover:bg-emerald-50'
-                              }`}
-                              title={prog.active ? 'Desactivar programa' : 'Activar programa'}
-                            >
-                              {prog.active ? 'Pausar' : 'Activar'}
-                            </button>
-                            <button
-                              onClick={() => openEditProgramModal(prog)}
-                              className="p-1.5 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-100 cursor-pointer"
-                              title="Editar configuración del programa"
-                            >
-                              <Edit3 className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteProgramConfirm(prog.id, prog.name)}
-                              className="p-1.5 text-slate-400 hover:text-rose-600 rounded hover:bg-slate-100 cursor-pointer"
-                              title="Eliminar programa"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
+        <ProgramaManagement />
       )}
 
       {/* TAB 3: GESTIÓN DE ROLES ESTATUTARIOS */}
@@ -1628,7 +1422,7 @@ export const Module_Admin: React.FC = () => {
                     required
                     value={roleName}
                     onChange={(e) => setRoleName(e.target.value)}
-                    placeholder="Ej. Delegado de Acreditación"
+                    placeholder="Ej. Gestor de Autoevaluación"
                     className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900"
                   />
                 </div>
@@ -1641,7 +1435,7 @@ export const Module_Admin: React.FC = () => {
                     required
                     value={roleCode}
                     onChange={(e) => setRoleCode(e.target.value)}
-                    placeholder="DEL_ACR"
+                    placeholder="GEST_AUTO"
                     className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-mono uppercase text-slate-900"
                   />
                 </div>
@@ -1659,7 +1453,7 @@ export const Module_Admin: React.FC = () => {
                   <option value="presidente">Presidente (Convocatoria y Firma)</option>
                   <option value="miembro">Miembro del Comité (Voz y Voto)</option>
                   <option value="seguimiento">Seguimiento (Auditoría de Compromisos)</option>
-                  <option value="autoevaluacion">Autoevaluación (Mapeo Calidad CNA/ABET)</option>
+                  <option value="autoevaluacion">Autoevaluación (Mapeo de Calidad)</option>
                   <option value="invitado_externo">Invitado Externo (Solo Consulta y Radicación)</option>
                 </select>
               </div>
@@ -1722,7 +1516,7 @@ export const Module_Admin: React.FC = () => {
                     className="rounded text-slate-900"
                   />
                   <span className="text-[11px] font-medium text-slate-800">
-                    Mapeo Calidad CNA/ABET
+                    Mapeo de Calidad
                   </span>
                 </label>
               </div>

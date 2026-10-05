@@ -25,6 +25,16 @@ export interface CustomRole {
 }
 
 export type AcademicLevel = 'pregrado' | 'postgrado' | 'tecnologia' | 'maestria' | 'especializacion';
+export type ProgramStatus = 'activo' | 'archivado' | 'en_revision';
+
+export interface CommitteeConfig {
+  minimumQuorum: number;
+  meetingPeriodicity: 'quincenal' | 'mensual' | 'bimestral';
+  targetSessionsPerSemester: number;
+  mandatoryEstamentos?: string[];
+  designatedSecretaryId?: string;
+  designatedPresidentId?: string;
+}
 
 export interface AcademicProgram {
   id: string;
@@ -33,12 +43,20 @@ export interface AcademicProgram {
   level: AcademicLevel;
   faculty: string;
   sniesCode?: string;
+  registroCalificadoResolucion?: string;
+  registroCalificadoVigencia?: string;
   directorName?: string;
   directorEmail?: string;
   active: boolean;
+  status?: ProgramStatus;
+  archivedAt?: string;
+  archivedBy?: string;
+  archiveReason?: string;
   color?: string;
   description?: string;
+  committeeConfig?: CommitteeConfig;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface User {
@@ -60,6 +78,8 @@ export interface User {
   passwordSalt?: string;
   programIds?: string[];
   primaryProgramId?: string;
+  programas_asignados?: string[];
+  programa_activo?: string;
 }
 
 export type MeetingType = 'ordinaria' | 'extraordinaria';
