@@ -10,8 +10,10 @@ import {
   AccessRequest,
   InstitutionalNotification,
   DigitalActSeal,
+  AcademicProgram,
 } from '../types';
 import {
+  INITIAL_PROGRAMS,
   INITIAL_USERS,
   INITIAL_ESTAMENTOS,
   INITIAL_CUSTOM_ROLES,
@@ -39,6 +41,7 @@ const DB_VERSION = 1;
 export interface FullBackupData {
   version: string;
   exportedAt: string;
+  programs: AcademicProgram[];
   users: User[];
   estamentos: Estamento[];
   customRoles: CustomRole[];
@@ -352,11 +355,12 @@ class BrowserStorageManager {
     const accessRequests = await this.getAll<AccessRequest>('accessRequests');
     const notifications = await this.getAll<InstitutionalNotification>('notifications');
     const digitalSeals = await this.getAll<DigitalActSeal>('digitalSeals');
-    const auditLogs = await this.getAll<AuditLogRecord>('auditLogs');
+    const programs = await this.getAll<AcademicProgram>('programs');
 
     return {
       version: '2.4.0-indexeddb',
       exportedAt: new Date().toISOString(),
+      programs: programs.length > 0 ? programs : INITIAL_PROGRAMS,
       users: users.map((u) => {
         const { password, ...safeUser } = u as any;
         return safeUser as User;
@@ -371,7 +375,7 @@ class BrowserStorageManager {
       accessRequests,
       notifications,
       digitalSeals,
-      auditLogs,
+      auditLogs: [],
       currentUserId: this.getAppState<string>('currentUserId', users[0]?.id),
       activeMeetingId: this.getAppState<string>('activeMeetingId', meetings[0]?.id),
     };
@@ -383,6 +387,10 @@ class BrowserStorageManager {
   async importBackupJson(backup: FullBackupData): Promise<void> {
     if (!backup.users || !backup.meetings) {
       throw new Error('El archivo de respaldo no contiene la estructura requerida del sistema SIG-Currículo.');
+    }
+
+    if (backup.programs && backup.programs.length > 0) {
+      await this.putAll('programs', backup.programs);
     }
 
     await this.saveAllData({

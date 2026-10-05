@@ -19,7 +19,8 @@ import {
   Clock,
   Sparkles,
   Link as LinkIcon,
-  FileDown
+  FileDown,
+  GraduationCap
 } from 'lucide-react';
 import { ExportActaPdfModal } from './ExportActaPdfModal';
 
@@ -170,6 +171,8 @@ export const ModuleB_MeetingLive: React.FC = () => {
       isExternalResponsible: respUser?.isExternal || false,
       dueDate: comDueDate,
       priority: comPriority,
+      programId: meeting.programId,
+      programName: meeting.programName,
     });
 
     setComTitle('');
@@ -194,6 +197,10 @@ export const ModuleB_MeetingLive: React.FC = () => {
             <span className="text-slate-300">·</span>
             <span className="font-mono text-xs font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
               {meeting.code}
+            </span>
+            <span className="inline-flex items-center gap-1 font-mono text-xs font-bold text-emerald-900 bg-emerald-100 px-2.5 py-0.5 rounded border border-emerald-300">
+              <GraduationCap className="h-3.5 w-3.5 text-[#006837]" />
+              {meeting.programCode || 'ING-MEC'} · {meeting.programName || 'Ingeniería Mecánica'}
             </span>
             {meeting.status === 'en_curso' ? (
               <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
@@ -229,7 +236,7 @@ export const ModuleB_MeetingLive: React.FC = () => {
           >
             {meetings.map((m) => (
               <option key={m.id} value={m.id}>
-                {m.code} - {m.status}
+                {m.code} [{m.programCode || 'ING-MEC'}] - {m.status}
               </option>
             ))}
           </select>

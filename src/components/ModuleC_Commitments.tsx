@@ -20,7 +20,8 @@ import {
   Mail,
   BellRing,
   Copy,
-  Sparkles
+  Sparkles,
+  GraduationCap
 } from 'lucide-react';
 
 export const ModuleC_Commitments: React.FC = () => {
@@ -34,10 +35,14 @@ export const ModuleC_Commitments: React.FC = () => {
     meetings,
     accessRequests,
     requestActAccess,
-    resolveAccessRequest
+    resolveAccessRequest,
+    programs,
+    activeProgramId,
+    setActiveProgramId
   } = useApp();
 
   const [statusFilter, setStatusFilter] = useState<'all' | CommitmentStatus>('all');
+  const [moduleCProgramFilter, setModuleCProgramFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCommitment, setSelectedCommitment] = useState<Commitment | null>(commitments[0] || null);
 
@@ -83,10 +88,21 @@ export const ModuleC_Commitments: React.FC = () => {
     return Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   };
 
-  const overdueList = commitments.filter(
+  // Scope commitments by program filter
+  const programCommitments = commitments.filter((c) => {
+    if (moduleCProgramFilter !== 'all') {
+      return c.programId === moduleCProgramFilter;
+    }
+    if (activeProgramId !== 'all') {
+      return c.programId === activeProgramId;
+    }
+    return true;
+  });
+
+  const overdueList = programCommitments.filter(
     (c) => c.status !== 'cumplido' && getDaysRemaining(c.dueDate) < 0
   );
-  const dueSoonList = commitments.filter(
+  const dueSoonList = programCommitments.filter(
     (c) => c.status !== 'cumplido' && getDaysRemaining(c.dueDate) >= 0 && getDaysRemaining(c.dueDate) <= 7
   );
   const totalAtRisk = overdueList.length + dueSoonList.length;
@@ -168,7 +184,7 @@ Institución Universitaria Mayor de Cartagena
   };
 
   // Filtered commitments
-  const filteredCommitments = commitments.filter((c) => {
+  const filteredCommitments = programCommitments.filter((c) => {
     // If external guest, only see tasks assigned to them!
     if (isExternal && c.responsibleId !== currentUser.id) {
       return false;
@@ -180,7 +196,8 @@ Institución Universitaria Mayor de Cartagena
       const matchTitle = c.title.toLowerCase().includes(q);
       const matchResp = c.responsibleName.toLowerCase().includes(q);
       const matchActa = c.meetingCode.toLowerCase().includes(q);
-      if (!matchTitle && !matchResp && !matchActa) return false;
+      const matchProg = (c.programName || '').toLowerCase().includes(q);
+      if (!matchTitle && !matchResp && !matchActa && !matchProg) return false;
     }
     return true;
   });
@@ -360,34 +377,56 @@ Institución Universitaria Mayor de Cartagena
       )}
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
         {/* Status Segmented Filters */}
-        <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
+        <div className="flex items-center gap-1 overflow-x-auto pb-1 lg:pb-0">
           {(['all', 'pendiente', 'en_revision', 'cumplido', 'vencido'] as const).map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap capitalize ${
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap capitalize cursor-pointer ${
                 statusFilter === st
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
-              {st === 'all' ? 'Todos' : st.replace('_', ' ')}
+              {st === 'all' ? 'Todos los Estados' : st.replace('_', ' ')}
             </button>
           ))}
         </div>
 
-        {/* Search */}
-        <div className="relative min-w-[220px]">
-          <Search className="h-3.5 w-3.5 absolute left-3 top-2.5 text-slate-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar por tarea, acta o responsable..."
-            className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900"
-          />
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Program Filter Select */}
+          <div className="relative">
+            <select
+              value={moduleCProgramFilter}
+              onChange={(e) => setModuleCProgramFilter(e.target.value)}
+              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 font-medium cursor-pointer"
+            >
+              <option value="all">
+                {activeProgramId !== 'all' 
+                  ? `Filtro Global (${programs.find(p => p.id === activeProgramId)?.code || 'Programa'})` 
+                  : 'Todos los Programas de la Facultad'}
+              </option>
+              {programs.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.code} - {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Search */}
+          <div className="relative min-w-[200px] flex-1">
+            <Search className="h-3.5 w-3.5 absolute left-3 top-2.5 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar por tarea, acta, programa..."
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900"
+            />
+          </div>
         </div>
       </div>
 
@@ -400,7 +439,7 @@ Institución Universitaria Mayor de Cartagena
               Compromisos ({filteredCommitments.length})
             </h2>
             <span className="text-[11px] text-slate-400">
-              {isExternal ? 'Mostrando únicamente tareas a su nombre' : 'Vista global del comité'}
+              {isExternal ? 'Mostrando únicamente tareas a su nombre' : 'Vista de compromisos y plazos'}
             </span>
           </div>
 
@@ -425,9 +464,13 @@ Institución Universitaria Mayor de Cartagena
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="font-mono text-xs font-bold text-slate-700">
                           {com.meetingCode}
+                        </span>
+                        <span className="inline-flex items-center gap-1 font-mono text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
+                          <GraduationCap className="h-3 w-3 text-[#006837]" />
+                          {com.programName ? (programs.find(p => p.id === com.programId)?.code || com.programName) : 'ING-MEC'}
                         </span>
                         <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
                           Prioridad {com.priority}
@@ -438,7 +481,7 @@ Institución Universitaria Mayor de Cartagena
                           </span>
                         )}
                       </div>
-                      <h3 className="text-xs font-bold text-slate-900 mt-1 line-clamp-2">
+                      <h3 className="text-xs font-bold text-slate-900 mt-1.5 line-clamp-2">
                         {com.title}
                       </h3>
                     </div>

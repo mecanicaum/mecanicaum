@@ -13,9 +13,11 @@ import {
   InstitutionalNotification,
   DigitalActSeal,
   ServerAuditLog,
+  AcademicProgram,
 } from './types';
 
 interface DatabaseSchema {
+  programs: AcademicProgram[];
   users: User[];
   estamentos: Estamento[];
   customRoles: CustomRole[];
@@ -33,6 +35,65 @@ interface DatabaseSchema {
 const DATA_DIR = path.resolve(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'sig_curriculo_db.json');
 
+export const DEFAULT_PROGRAMS: AcademicProgram[] = [
+  {
+    id: 'prog-mec',
+    code: 'ING-MEC',
+    name: 'Ingeniería Mecánica',
+    level: 'pregrado',
+    faculty: 'Facultad de Ingeniería',
+    sniesCode: '108420',
+    directorName: 'Dirección de Programa de Ingeniería Mecánica',
+    directorEmail: 'autoevaluacionycurriculomecanica@umayor.edu.co',
+    active: true,
+    color: 'emerald',
+    description: 'Programa oficial acreditado en alta calidad. Formación en diseño mecánico, termofluidos, manufactura y automatización industrial.',
+    createdAt: '2026-01-15T08:00:00.000Z',
+  },
+  {
+    id: 'prog-sis',
+    code: 'ING-SIS',
+    name: 'Ingeniería de Sistemas',
+    level: 'pregrado',
+    faculty: 'Facultad de Ingeniería',
+    sniesCode: '109210',
+    directorName: 'Dirección de Programa de Ingeniería de Sistemas',
+    directorEmail: 'sistemas@umayor.edu.co',
+    active: true,
+    color: 'blue',
+    description: 'Formación en ingeniería de software, arquitectura en la nube, ciberseguridad e inteligencia artificial aplicada.',
+    createdAt: '2026-01-15T08:00:00.000Z',
+  },
+  {
+    id: 'prog-civ',
+    code: 'ING-CIV',
+    name: 'Ingeniería Civil',
+    level: 'pregrado',
+    faculty: 'Facultad de Ingeniería',
+    sniesCode: '110530',
+    directorName: 'Dirección de Programa de Ingeniería Civil',
+    directorEmail: 'civil@umayor.edu.co',
+    active: true,
+    color: 'amber',
+    description: 'Especializado en infraestructura sostenible, geotecnia, estructuras sismorresistentes e hidráulica costera.',
+    createdAt: '2026-01-15T08:00:00.000Z',
+  },
+  {
+    id: 'prog-tec-elec',
+    code: 'TEC-ELEC',
+    name: 'Tecnología en Mantenimiento Electromecánico',
+    level: 'tecnologia',
+    faculty: 'Facultad de Ingeniería',
+    sniesCode: '102140',
+    directorName: 'Coordinación Tecnológica',
+    directorEmail: 'electromecanica@umayor.edu.co',
+    active: true,
+    color: 'purple',
+    description: 'Programa tecnológico enfocado en mantenimiento predictivo industrial, redes de potencia y plantas de producción.',
+    createdAt: '2026-01-15T08:00:00.000Z',
+  },
+];
+
 const INITIAL_ADMIN_USER: User = {
   id: 'usr-admin-principal',
   name: 'Super Administrador del Comité Curricular',
@@ -45,6 +106,8 @@ const INITIAL_ADMIN_USER: User = {
   periodo: '2026 - 2028',
   active: true,
   password: 'AdminCurriculo2026*',
+  programIds: ['prog-mec', 'prog-sis', 'prog-civ', 'prog-tec-elec'],
+  primaryProgramId: 'prog-mec',
 };
 
 const DEFAULT_ESTAMENTOS: Estamento[] = [
@@ -179,6 +242,7 @@ class Database {
 
   private getInitialData(): DatabaseSchema {
     return {
+      programs: DEFAULT_PROGRAMS,
       users: [INITIAL_ADMIN_USER],
       estamentos: DEFAULT_ESTAMENTOS,
       customRoles: DEFAULT_CUSTOM_ROLES,
@@ -223,6 +287,7 @@ class Database {
         // Merge with initial data structure in case new tables were added
         const initial = this.getInitialData();
         return {
+          programs: parsed.programs && parsed.programs.length > 0 ? parsed.programs : initial.programs,
           users: parsed.users || initial.users,
           estamentos: parsed.estamentos || initial.estamentos,
           customRoles: parsed.customRoles || initial.customRoles,
@@ -275,6 +340,42 @@ class Database {
   // Generic Getters
   public getAll(): DatabaseSchema {
     return this.data;
+  }
+
+  // Academic Programs
+  public getPrograms(): AcademicProgram[] {
+    return this.data.programs || [];
+  }
+
+  public getProgramById(id: string): AcademicProgram | undefined {
+    return (this.data.programs || []).find((p) => p.id === id);
+  }
+
+  public addProgram(program: AcademicProgram): AcademicProgram {
+    if (!this.data.programs) this.data.programs = [];
+    this.data.programs.push(program);
+    this.saveDatabase();
+    return program;
+  }
+
+  public updateProgram(id: string, updates: Partial<AcademicProgram>): AcademicProgram | null {
+    if (!this.data.programs) this.data.programs = [];
+    const idx = this.data.programs.findIndex((p) => p.id === id);
+    if (idx === -1) return null;
+    this.data.programs[idx] = { ...this.data.programs[idx], ...updates };
+    this.saveDatabase();
+    return this.data.programs[idx];
+  }
+
+  public deleteProgram(id: string): boolean {
+    if (!this.data.programs) return false;
+    const initialLen = this.data.programs.length;
+    this.data.programs = this.data.programs.filter((p) => p.id !== id);
+    if (this.data.programs.length !== initialLen) {
+      this.saveDatabase();
+      return true;
+    }
+    return false;
   }
 
   // Users

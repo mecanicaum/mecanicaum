@@ -27,6 +27,7 @@ import {
   User,
   Estamento,
   CustomRole,
+  AcademicProgram,
 } from './types';
 
 import {
@@ -55,6 +56,7 @@ router.get('/bootstrap', (req: AuthenticatedRequest, res: Response) => {
 
   res.json({
     currentUser: currentUser ? sanitizeUser(currentUser) : null,
+    programs: db.getPrograms(),
     users: db.getUsers().map(sanitizeUser),
     estamentos: db.getEstamentos(),
     customRoles: db.getCustomRoles(),
@@ -298,6 +300,8 @@ router.post('/users', requireAuth, requireRoles(['presidente', 'seguimiento', 'a
     active: true,
     password: passwordHash,
     passwordSalt,
+    programIds: Array.isArray(data.programIds) && data.programIds.length > 0 ? data.programIds : ['prog-mec'],
+    primaryProgramId: data.primaryProgramId || (Array.isArray(data.programIds) && data.programIds[0]) || 'prog-mec',
   };
 
   db.addUser(newUser);
@@ -390,6 +394,85 @@ router.delete('/users/:id', requireAuth, requireRoles(['presidente']), (req: Aut
 
   wsHub.broadcast('user:deleted', { id: req.params.id }, req.user!.id);
   res.json({ success: true, message: 'Usuario dado de baja exitosamente.' });
+});
+
+/**
+ * --------------------------------------------------------------------------------
+ * PROGRAMAS ACADÉMICOS DE LA FACULTAD (MÓDULO MULTIPROGRAMA)
+ * --------------------------------------------------------------------------------
+ */
+router.get('/programs', (req: AuthenticatedRequest, res: Response) => {
+  res.json(db.getPrograms());
+});
+
+router.post('/programs', requireAuth, requireRoles(['super_admin', 'presidente']), (req: AuthenticatedRequest, res: Response) => {
+  const data = req.body as Partial<AcademicProgram>;
+  if (!data.name || !data.code) {
+    return res.status(400).json({ error: 'El nombre y código del programa son obligatorios.' });
+  }
+
+  const newProg: AcademicProgram = {
+    id: `prog-${Date.now()}`,
+    code: data.code.toUpperCase().trim(),
+    name: data.name.trim(),
+    level: data.level || 'pregrado',
+    faculty: data.faculty || 'Facultad de Ingeniería',
+    sniesCode: data.sniesCode?.trim() || '',
+    directorName: data.directorName?.trim() || '',
+    directorEmail: data.directorEmail?.trim() || '',
+    active: data.active !== undefined ? data.active : true,
+    color: data.color || 'emerald',
+    description: data.description?.trim() || '',
+    createdAt: new Date().toISOString(),
+  };
+
+  db.addProgram(newProg);
+  db.logAudit({
+    userId: req.user?.id || 'admin',
+    userName: req.user?.name || 'Administrador',
+    userRole: req.user?.role || 'super_admin',
+    action: 'CREATE_PROGRAM',
+    resource: `/api/programs/${newProg.id}`,
+    details: `Creación de programa académico: ${newProg.name} (${newProg.code})`,
+  });
+
+  wsHub.broadcast('program:created', newProg, req.user?.id);
+  res.status(201).json(newProg);
+});
+
+router.put('/programs/:id', requireAuth, requireRoles(['super_admin', 'presidente']), (req: AuthenticatedRequest, res: Response) => {
+  const updated = db.updateProgram(req.params.id, req.body);
+  if (!updated) return res.status(404).json({ error: 'Programa no encontrado.' });
+
+  db.logAudit({
+    userId: req.user?.id || 'admin',
+    userName: req.user?.name || 'Administrador',
+    userRole: req.user?.role || 'super_admin',
+    action: 'UPDATE_PROGRAM',
+    resource: `/api/programs/${req.params.id}`,
+    details: `Actualización de programa académico: ${updated.name}`,
+  });
+
+  wsHub.broadcast('program:updated', updated, req.user?.id);
+  res.json(updated);
+});
+
+router.delete('/programs/:id', requireAuth, requireRoles(['super_admin', 'presidente']), (req: AuthenticatedRequest, res: Response) => {
+  const prog = db.getProgramById(req.params.id);
+  const deleted = db.deleteProgram(req.params.id);
+  if (!deleted) return res.status(404).json({ error: 'Programa no encontrado.' });
+
+  db.logAudit({
+    userId: req.user?.id || 'admin',
+    userName: req.user?.name || 'Administrador',
+    userRole: req.user?.role || 'super_admin',
+    action: 'DELETE_PROGRAM',
+    resource: `/api/programs/${req.params.id}`,
+    details: `Eliminación de programa académico: ${prog?.name || req.params.id}`,
+  });
+
+  wsHub.broadcast('program:deleted', { id: req.params.id }, req.user?.id);
+  res.json({ success: true, message: 'Programa eliminado correctamente.' });
 });
 
 /**

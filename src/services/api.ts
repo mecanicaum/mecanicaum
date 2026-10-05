@@ -12,6 +12,7 @@ import {
   VoteOption,
   VoteRecord,
   DigitalActSeal,
+  AcademicProgram,
 } from '../types';
 
 let currentUserId = 'usr-admin-principal';
@@ -215,6 +216,12 @@ export const api = {
   createUser: (data: Partial<User>) => request<User>('/users', { method: 'POST', body: JSON.stringify(data) }),
   updateUser: (id: string, data: Partial<User>) => request<User>(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteUser: (id: string) => request<{ success: boolean; message: string }>(`/users/${id}`, { method: 'DELETE' }),
+
+  // Academic Programs (Multiprograma)
+  getPrograms: () => request<AcademicProgram[]>('/programs'),
+  createProgram: (data: Partial<AcademicProgram>) => request<AcademicProgram>('/programs', { method: 'POST', body: JSON.stringify(data) }),
+  updateProgram: (id: string, data: Partial<AcademicProgram>) => request<AcademicProgram>(`/programs/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteProgram: (id: string) => request<{ success: boolean; message: string }>(`/programs/${id}`, { method: 'DELETE' }),
 
   // Estamentos & Roles
   getEstamentos: () => request<Estamento[]>('/estamentos'),

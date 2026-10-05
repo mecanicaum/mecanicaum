@@ -8,8 +8,69 @@ import {
   AccessRequest, 
   InstitutionalNotification,
   Estamento,
-  CustomRole
+  CustomRole,
+  AcademicProgram,
 } from '../types';
+
+// PROGRAMAS ACADÉMICOS DE LA FACULTAD DE INGENIERÍA (UMAYOR)
+export const INITIAL_PROGRAMS: AcademicProgram[] = [
+  {
+    id: 'prog-mec',
+    code: 'ING-MEC',
+    name: 'Ingeniería Mecánica',
+    level: 'pregrado',
+    faculty: 'Facultad de Ingeniería',
+    sniesCode: '108420',
+    directorName: 'Dirección de Programa de Ingeniería Mecánica',
+    directorEmail: 'autoevaluacionycurriculomecanica@umayor.edu.co',
+    active: true,
+    color: 'emerald',
+    description: 'Programa oficial acreditado en alta calidad. Formación en diseño mecánico, termofluidos, manufactura y automatización industrial.',
+    createdAt: '2026-01-15T08:00:00.000Z',
+  },
+  {
+    id: 'prog-sis',
+    code: 'ING-SIS',
+    name: 'Ingeniería de Sistemas',
+    level: 'pregrado',
+    faculty: 'Facultad de Ingeniería',
+    sniesCode: '109210',
+    directorName: 'Dirección de Programa de Ingeniería de Sistemas',
+    directorEmail: 'sistemas@umayor.edu.co',
+    active: true,
+    color: 'blue',
+    description: 'Formación en ingeniería de software, arquitectura en la nube, ciberseguridad e inteligencia artificial aplicada.',
+    createdAt: '2026-01-15T08:00:00.000Z',
+  },
+  {
+    id: 'prog-civ',
+    code: 'ING-CIV',
+    name: 'Ingeniería Civil',
+    level: 'pregrado',
+    faculty: 'Facultad de Ingeniería',
+    sniesCode: '110530',
+    directorName: 'Dirección de Programa de Ingeniería Civil',
+    directorEmail: 'civil@umayor.edu.co',
+    active: true,
+    color: 'amber',
+    description: 'Especializado en infraestructura sostenible, geotecnia, estructuras sismorresistentes e hidráulica costera.',
+    createdAt: '2026-01-15T08:00:00.000Z',
+  },
+  {
+    id: 'prog-tec-elec',
+    code: 'TEC-ELEC',
+    name: 'Tecnología en Mantenimiento Electromecánico',
+    level: 'tecnologia',
+    faculty: 'Facultad de Ingeniería',
+    sniesCode: '102140',
+    directorName: 'Coordinación Tecnológica',
+    directorEmail: 'electromecanica@umayor.edu.co',
+    active: true,
+    color: 'purple',
+    description: 'Programa tecnológico enfocado en mantenimiento predictivo industrial, redes de potencia y plantas de producción.',
+    createdAt: '2026-01-15T08:00:00.000Z',
+  },
+];
 
 // ESTAMENTOS ESTATUTARIOS INSTITUCIONALES (Cuerpos de Representación Universitaria)
 export const INITIAL_ESTAMENTOS: Estamento[] = [
@@ -152,6 +213,8 @@ export const INITIAL_USERS: User[] = [
     hasVote: true,
     periodo: '2026 - 2028',
     active: true,
+    programIds: ['prog-mec', 'prog-sis', 'prog-civ', 'prog-tec-elec'],
+    primaryProgramId: 'prog-mec',
   },
 ];
 

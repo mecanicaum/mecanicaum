@@ -208,7 +208,7 @@ export const ExportActaPdfModal: React.FC<ExportActaPdfModalProps> = ({
                 Institución Universitaria Mayor de Cartagena · Facultad de Ingeniería
               </h1>
               <h2 className="text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-wide">
-                Departamento de Ingeniería Mecánica · Comité Curricular
+                {meeting.programName ? `Programa de ${meeting.programName}` : 'Departamento de Ingeniería Mecánica'} {meeting.programCode ? `(${meeting.programCode})` : ''} · Comité Curricular
               </h2>
             </div>
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { User, Estamento, CustomRole, UserRole } from '../types';
+import { User, Estamento, CustomRole, UserRole, AcademicProgram, AcademicLevel } from '../types';
 import { 
   Users, 
   Shield, 
@@ -11,18 +11,19 @@ import {
   CheckCircle2, 
   XCircle, 
   Mail, 
-  UserCheck, 
   Vote, 
-  FileCheck2, 
   Search,
   Filter,
   Check,
-  ChevronRight,
-  Sparkles,
-  Palette,
-  Lock
+  Lock,
+  GraduationCap,
+  BookOpen,
+  Calendar,
+  CheckSquare,
+  Star,
+  Layers,
+  ArrowRight
 } from 'lucide-react';
-import { BrandAssetsManager } from './admin/BrandAssetsManager';
 import { SuperAdminBrandingManager } from './admin/SuperAdminBrandingManager';
 
 export const Module_Admin: React.FC = () => {
@@ -40,14 +41,26 @@ export const Module_Admin: React.FC = () => {
     customRoles, 
     createCustomRole, 
     updateCustomRole, 
-    deleteCustomRole 
+    deleteCustomRole,
+    programs,
+    createProgram,
+    updateProgram,
+    deleteProgram,
+    activeProgramId,
+    setActiveProgramId,
+    meetings,
+    commitments
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'members' | 'roles' | 'estamentos' | 'brand_assets' | 'brand_customization'>('members');
+  const [activeTab, setActiveTab] = useState<'members' | 'programs' | 'roles' | 'estamentos' | 'brand_customization'>('members');
 
-  // Search & Filter
+  // Search & Filter for Members
   const [memberSearch, setMemberSearch] = useState('');
   const [estamentoFilter, setEstamentoFilter] = useState('all');
+  const [programFilter, setProgramFilter] = useState('all');
+
+  // Search for Programs
+  const [programSearch, setProgramSearch] = useState('');
 
   // Member Modal State
   const [showMemberModal, setShowMemberModal] = useState(false);
@@ -62,6 +75,23 @@ export const Module_Admin: React.FC = () => {
   const [memberPeriodo, setMemberPeriodo] = useState('2026 - 2028');
   const [memberIsExternal, setMemberIsExternal] = useState(false);
   const [memberPassword, setMemberPassword] = useState('');
+  // Multiprogram member association state
+  const [memberProgramIds, setMemberProgramIds] = useState<string[]>([]);
+  const [memberPrimaryProgramId, setMemberPrimaryProgramId] = useState<string>('');
+
+  // Program Modal State
+  const [showProgramModal, setShowProgramModal] = useState(false);
+  const [editingProgramId, setEditingProgramId] = useState<string | null>(null);
+  const [progCode, setProgCode] = useState('');
+  const [progName, setProgName] = useState('');
+  const [progLevel, setProgLevel] = useState<AcademicLevel>('pregrado');
+  const [progFaculty, setProgFaculty] = useState('Facultad de Ingeniería');
+  const [progSnies, setProgSnies] = useState('');
+  const [progDirectorName, setProgDirectorName] = useState('');
+  const [progDirectorEmail, setProgDirectorEmail] = useState('');
+  const [progColor, setProgColor] = useState('emerald');
+  const [progDescription, setProgDescription] = useState('');
+  const [progActive, setProgActive] = useState(true);
 
   // Role Modal State
   const [showRoleModal, setShowRoleModal] = useState(false);
@@ -84,6 +114,29 @@ export const Module_Admin: React.FC = () => {
   const [estHasVote, setEstHasVote] = useState(true);
   const [estColor, setEstColor] = useState('blue');
 
+  const isAdmin = currentUser.role === 'super_admin' || currentUser.role === 'presidente';
+
+  // Helper for program badge color classes
+  const getProgramBadgeClasses = (color?: string) => {
+    switch (color) {
+      case 'blue':
+        return 'bg-blue-50 text-blue-800 border-blue-200';
+      case 'amber':
+        return 'bg-amber-50 text-amber-900 border-amber-200';
+      case 'purple':
+        return 'bg-purple-50 text-purple-800 border-purple-200';
+      case 'indigo':
+        return 'bg-indigo-50 text-indigo-800 border-indigo-200';
+      case 'teal':
+        return 'bg-teal-50 text-teal-800 border-teal-200';
+      case 'rose':
+        return 'bg-rose-50 text-rose-800 border-rose-200';
+      case 'emerald':
+      default:
+        return 'bg-emerald-50 text-emerald-800 border-emerald-200';
+    }
+  };
+
   // Open Member Modal
   const openNewMemberModal = () => {
     setEditingUserId(null);
@@ -97,6 +150,10 @@ export const Module_Admin: React.FC = () => {
     setMemberPeriodo('2026 - 2028');
     setMemberIsExternal(false);
     setMemberPassword('Umayor2026!');
+    // Default to active program or first program
+    const defaultProg = activeProgramId !== 'all' ? activeProgramId : (programs[0]?.id || 'prog-mec');
+    setMemberProgramIds([defaultProg]);
+    setMemberPrimaryProgramId(defaultProg);
     setShowMemberModal(true);
   };
 
@@ -112,12 +169,50 @@ export const Module_Admin: React.FC = () => {
     setMemberPeriodo(u.periodo || '2026 - 2028');
     setMemberIsExternal(u.isExternal || false);
     setMemberPassword(u.password || '');
+    const userProgs = u.programIds && u.programIds.length > 0 
+      ? u.programIds 
+      : [u.primaryProgramId || programs[0]?.id || 'prog-mec'];
+    setMemberProgramIds(userProgs);
+    setMemberPrimaryProgramId(u.primaryProgramId || userProgs[0] || 'prog-mec');
     setShowMemberModal(true);
+  };
+
+  const handleToggleMemberProgram = (progId: string) => {
+    if (memberProgramIds.includes(progId)) {
+      if (memberProgramIds.length === 1) {
+        alert('El miembro debe estar asociado al menos a un programa curricular.');
+        return;
+      }
+      const updated = memberProgramIds.filter((id) => id !== progId);
+      setMemberProgramIds(updated);
+      if (memberPrimaryProgramId === progId) {
+        setMemberPrimaryProgramId(updated[0] || '');
+      }
+    } else {
+      const updated = [...memberProgramIds, progId];
+      setMemberProgramIds(updated);
+      if (!memberPrimaryProgramId) {
+        setMemberPrimaryProgramId(progId);
+      }
+    }
+  };
+
+  const handleSelectAllProgramsForMember = () => {
+    const allIds = programs.map((p) => p.id);
+    setMemberProgramIds(allIds);
+    if (!memberPrimaryProgramId && allIds.length > 0) {
+      setMemberPrimaryProgramId(allIds[0]);
+    }
   };
 
   const handleSaveMember = (e: React.FormEvent) => {
     e.preventDefault();
     if (!memberName.trim() || !memberEmail.trim()) return;
+
+    if (memberProgramIds.length === 0) {
+      alert('Debe asociar al miembro al menos a un programa curricular de la facultad.');
+      return;
+    }
 
     const selectedRole = customRoles.find((r) => r.id === memberRoleId);
     const selectedEst = estamentos.find((e) => e.id === memberEstamentoId);
@@ -126,41 +221,129 @@ export const Module_Admin: React.FC = () => {
     const roleLabel = selectedRole ? selectedRole.name : 'Miembro del Comité';
     const estNameStr = selectedEst ? selectedEst.name : 'Comité Curricular';
 
+    const finalPrimaryProg = memberPrimaryProgramId && memberProgramIds.includes(memberPrimaryProgramId)
+      ? memberPrimaryProgramId
+      : memberProgramIds[0];
+
     if (editingUserId) {
       updateUser(editingUserId, {
-        name: memberName,
-        email: memberEmail,
+        name: memberName.trim(),
+        email: memberEmail.trim(),
         role: baseRole,
         customRoleId: memberRoleId,
         roleLabel,
         estamentoId: memberEstamentoId,
         estamentoName: estNameStr,
-        faculty: memberFaculty,
-        department: memberDepartment,
+        faculty: memberFaculty.trim(),
+        department: memberDepartment.trim(),
         hasVote: memberHasVote,
-        periodo: memberPeriodo,
+        periodo: memberPeriodo.trim(),
         isExternal: memberIsExternal,
         password: memberPassword.trim() || undefined,
+        programIds: memberProgramIds,
+        primaryProgramId: finalPrimaryProg,
       });
     } else {
       createUser({
-        name: memberName,
-        email: memberEmail,
+        name: memberName.trim(),
+        email: memberEmail.trim(),
         role: baseRole,
         customRoleId: memberRoleId,
         roleLabel,
         estamentoId: memberEstamentoId,
         estamentoName: estNameStr,
-        faculty: memberFaculty,
-        department: memberDepartment,
+        faculty: memberFaculty.trim(),
+        department: memberDepartment.trim(),
         hasVote: memberHasVote,
-        periodo: memberPeriodo,
+        periodo: memberPeriodo.trim(),
         isExternal: memberIsExternal,
         password: memberPassword.trim() || 'Umayor2026!',
+        programIds: memberProgramIds,
+        primaryProgramId: finalPrimaryProg,
       });
     }
 
     setShowMemberModal(false);
+  };
+
+  // Open Program Modal
+  const openNewProgramModal = () => {
+    setEditingProgramId(null);
+    setProgCode('');
+    setProgName('');
+    setProgLevel('pregrado');
+    setProgFaculty('Facultad de Ingeniería');
+    setProgSnies('');
+    setProgDirectorName('');
+    setProgDirectorEmail('');
+    setProgColor('emerald');
+    setProgDescription('');
+    setProgActive(true);
+    setShowProgramModal(true);
+  };
+
+  const openEditProgramModal = (prog: AcademicProgram) => {
+    setEditingProgramId(prog.id);
+    setProgCode(prog.code);
+    setProgName(prog.name);
+    setProgLevel(prog.level);
+    setProgFaculty(prog.faculty || 'Facultad de Ingeniería');
+    setProgSnies(prog.sniesCode || '');
+    setProgDirectorName(prog.directorName || '');
+    setProgDirectorEmail(prog.directorEmail || '');
+    setProgColor(prog.color || 'emerald');
+    setProgDescription(prog.description || '');
+    setProgActive(prog.active !== false);
+    setShowProgramModal(true);
+  };
+
+  const handleSaveProgram = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!progName.trim() || !progCode.trim()) return;
+
+    if (editingProgramId) {
+      await updateProgram(editingProgramId, {
+        name: progName.trim(),
+        code: progCode.trim().toUpperCase(),
+        level: progLevel,
+        faculty: progFaculty.trim(),
+        sniesCode: progSnies.trim(),
+        directorName: progDirectorName.trim(),
+        directorEmail: progDirectorEmail.trim(),
+        color: progColor,
+        description: progDescription.trim(),
+        active: progActive,
+      });
+    } else {
+      await createProgram({
+        name: progName.trim(),
+        code: progCode.trim().toUpperCase(),
+        level: progLevel,
+        faculty: progFaculty.trim(),
+        sniesCode: progSnies.trim(),
+        directorName: progDirectorName.trim(),
+        directorEmail: progDirectorEmail.trim(),
+        color: progColor,
+        description: progDescription.trim(),
+        active: progActive,
+      });
+    }
+
+    setShowProgramModal(false);
+  };
+
+  const handleToggleProgramActive = async (prog: AcademicProgram) => {
+    await updateProgram(prog.id, { active: !prog.active });
+  };
+
+  const handleDeleteProgramConfirm = async (id: string, name: string) => {
+    if (programs.length <= 1) {
+      alert('No es posible eliminar el único programa académico configurado en el sistema.');
+      return;
+    }
+    if (confirm(`¿Está seguro de eliminar el programa académico "${name}"? Esta acción desvinculará sus registros del comité.`)) {
+      await deleteProgram(id);
+    }
   };
 
   // Open Role Modal
@@ -267,8 +450,15 @@ export const Module_Admin: React.FC = () => {
     setShowEstamentoModal(false);
   };
 
+  // Filtered Users for Member Management
   const filteredUsers = users.filter((u) => {
     if (estamentoFilter !== 'all' && u.estamentoId !== estamentoFilter) return false;
+    if (programFilter !== 'all') {
+      const userProgs = u.programIds && u.programIds.length > 0 
+        ? u.programIds 
+        : (u.primaryProgramId ? [u.primaryProgramId] : ['prog-mec']);
+      if (!userProgs.includes(programFilter)) return false;
+    }
     if (memberSearch.trim()) {
       const q = memberSearch.toLowerCase();
       const matchName = u.name.toLowerCase().includes(q);
@@ -280,19 +470,33 @@ export const Module_Admin: React.FC = () => {
     return true;
   });
 
+  // Filtered Programs for Program Management
+  const filteredPrograms = programs.filter((p) => {
+    if (programSearch.trim()) {
+      const q = programSearch.toLowerCase();
+      return (
+        p.name.toLowerCase().includes(q) ||
+        p.code.toLowerCase().includes(q) ||
+        (p.directorName || '').toLowerCase().includes(q) ||
+        (p.sniesCode || '').includes(q)
+      );
+    }
+    return true;
+  });
+
   return (
     <div className="space-y-6">
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider font-cinzel">
             Módulo de Administración Institucional
           </span>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 mt-0.5">
-            Configuración de Miembros, Roles & Estamentos
+            Gobernanza Multiprograma, Miembros & Estamentos
           </h1>
           <p className="text-xs text-slate-600 mt-1 max-w-2xl">
-            Alta y gobernanza de los integrantes del Comité Curricular, definición de roles institucionales con permisos RBAC y parametrización de los estamentos de representación universitaria.
+            Parametrización exclusiva de programas académicos de la facultad, asociación simultánea de miembros a comités curriculares y roles estatutarios con voto reglamentario.
           </p>
         </div>
 
@@ -309,6 +513,23 @@ export const Module_Admin: React.FC = () => {
             <Users className="h-3.5 w-3.5" />
             Miembros ({users.length})
           </button>
+
+          <button
+            onClick={() => setActiveTab('programs')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+              activeTab === 'programs'
+                ? 'bg-[#006837] text-white shadow-xs font-bold'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+            title="Módulo exclusivo de administración para crear y gestionar los programas de la facultad"
+          >
+            <GraduationCap className={`h-3.5 w-3.5 ${activeTab === 'programs' ? 'text-[#E58A13]' : 'text-slate-500'}`} />
+            <span>Programas ({programs.length})</span>
+            <span className="text-[9px] bg-amber-400 text-slate-950 font-black px-1.5 py-0.2 rounded-md uppercase">
+              Admin
+            </span>
+          </button>
+
           <button
             onClick={() => setActiveTab('roles')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
@@ -320,6 +541,7 @@ export const Module_Admin: React.FC = () => {
             <Shield className="h-3.5 w-3.5" />
             Roles ({customRoles.length})
           </button>
+
           <button
             onClick={() => setActiveTab('estamentos')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
@@ -331,17 +553,7 @@ export const Module_Admin: React.FC = () => {
             <Building2 className="h-3.5 w-3.5" />
             Estamentos ({estamentos.length})
           </button>
-          <button
-            onClick={() => setActiveTab('brand_assets')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
-              activeTab === 'brand_assets'
-                ? 'bg-[#006837] text-white shadow-xs font-bold'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Palette className={`h-3.5 w-3.5 ${activeTab === 'brand_assets' ? 'text-[#E58A13]' : 'text-amber-600'}`} />
-            <span>Manual de Marca</span>
-          </button>
+
           <button
             onClick={() => setActiveTab('brand_customization')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
@@ -360,20 +572,36 @@ export const Module_Admin: React.FC = () => {
         </div>
       </div>
 
-      {/* TAB 1: GESTIÓN DE MIEMBROS */}
+      {/* TAB 1: GESTIÓN DE MIEMBROS (CON ASOCIACIÓN MULTIPROGRAMA) */}
       {activeTab === 'members' && (
         <div className="space-y-4">
           {/* Action and Filter Bar */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={openNewMemberModal}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 transition-colors shadow-xs"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#006837] px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-[#004D25] transition-colors shadow-xs cursor-pointer"
               >
-                <Plus className="h-3.5 w-3.5" />
+                <Plus className="h-3.5 w-3.5 text-[#E58A13]" />
                 Registrar Nuevo Miembro
               </button>
 
+              {/* Program filter */}
+              <select
+                value={programFilter}
+                onChange={(e) => setProgramFilter(e.target.value)}
+                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700"
+                title="Filtrar integrantes por programa curricular"
+              >
+                <option value="all">Todos los Programas de Facultad</option>
+                {programs.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.code} - {p.name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Estamento filter */}
               <select
                 value={estamentoFilter}
                 onChange={(e) => setEstamentoFilter(e.target.value)}
@@ -382,20 +610,20 @@ export const Module_Admin: React.FC = () => {
                 <option value="all">Todos los Estamentos</option>
                 {estamentos.map((est) => (
                   <option key={est.id} value={est.id}>
-                    {est.name}
+                    {est.name} ({est.code})
                   </option>
                 ))}
               </select>
             </div>
 
             <div className="relative min-w-[240px]">
-              <Search className="h-3.5 w-3.5 absolute left-3 top-2.5 text-slate-400" />
+              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
               <input
                 type="text"
                 value={memberSearch}
                 onChange={(e) => setMemberSearch(e.target.value)}
                 placeholder="Buscar por nombre, correo o rol..."
-                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#006837]"
               />
             </div>
           </div>
@@ -407,98 +635,125 @@ export const Module_Admin: React.FC = () => {
                 <thead className="border-b border-slate-200 bg-slate-100/70 font-semibold text-slate-700">
                   <tr>
                     <th className="py-3 px-4">Nombre y Correo Institucional</th>
+                    <th className="py-3 px-4">Programas Asociados (Multiprograma)</th>
                     <th className="py-3 px-4">Rol del Comité</th>
                     <th className="py-3 px-4">Estamento que Representa</th>
                     <th className="py-3 px-4 text-center">Derecho a Voto</th>
-                    <th className="py-3 px-4">Período Estatutario</th>
+                    <th className="py-3 px-4">Período</th>
                     <th className="py-3 px-4 text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredUsers.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-xs text-slate-400">
-                        No se encontraron integrantes que coincidan con la búsqueda.
+                      <td colSpan={7} className="py-8 text-center text-xs text-slate-400">
+                        No se encontraron integrantes que coincidan con los criterios de búsqueda o filtro de programa.
                       </td>
                     </tr>
                   ) : (
-                    filteredUsers.map((u) => (
-                      <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2.5">
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-xs font-bold text-white font-mono">
-                              {u.avatarInitials}
+                    filteredUsers.map((u) => {
+                      const userProgs = u.programIds && u.programIds.length > 0 
+                        ? u.programIds 
+                        : (u.primaryProgramId ? [u.primaryProgramId] : ['prog-mec']);
+                      
+                      return (
+                        <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2.5">
+                              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#006837] text-xs font-bold text-white font-mono shadow-2xs">
+                                {u.avatarInitials}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-semibold text-slate-900 truncate">{u.name}</p>
+                                <p className="text-[10px] text-slate-500 font-mono truncate">{u.email}</p>
+                              </div>
                             </div>
-                            <div className="min-w-0">
-                              <p className="font-semibold text-slate-900 truncate">{u.name}</p>
-                              <p className="text-[10px] text-slate-500 font-mono truncate">{u.email}</p>
+                          </td>
+
+                          {/* Multiprogram Badges */}
+                          <td className="py-3 px-4">
+                            <div className="flex flex-wrap items-center gap-1 max-w-[240px]">
+                              {userProgs.map((pid) => {
+                                const progObj = programs.find((p) => p.id === pid);
+                                const isPrimary = u.primaryProgramId === pid;
+                                return (
+                                  <span
+                                    key={pid}
+                                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border ${getProgramBadgeClasses(progObj?.color)}`}
+                                    title={`${progObj?.name || pid}${isPrimary ? ' · Programa Principal' : ''}`}
+                                  >
+                                    {isPrimary && <Star className="h-2.5 w-2.5 text-amber-500 fill-amber-500 shrink-0" />}
+                                    {progObj?.code || pid}
+                                  </span>
+                                );
+                              })}
                             </div>
-                          </div>
-                        </td>
+                          </td>
 
-                        <td className="py-3 px-4">
-                          <span className="font-medium text-slate-800">{u.roleLabel}</span>
-                          <span className="block text-[10px] text-slate-400 uppercase font-mono">
-                            Base: {u.role}
-                          </span>
-                        </td>
-
-                        <td className="py-3 px-4">
-                          <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700 border border-slate-200">
-                            <Building2 className="h-3 w-3 text-slate-500" />
-                            {u.estamentoName || 'Sin estamento asignado'}
-                          </span>
-                        </td>
-
-                        <td className="py-3 px-4 text-center">
-                          {u.hasVote !== false && u.role !== 'invitado_externo' ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                              <CheckCircle2 className="h-3 w-3 text-emerald-600" /> Voz y Voto
+                          <td className="py-3 px-4">
+                            <span className="font-medium text-slate-800">{u.roleLabel}</span>
+                            <span className="block text-[10px] text-slate-400 uppercase font-mono">
+                              Base: {u.role}
                             </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
-                              <Vote className="h-3 w-3 text-slate-400" /> Solo Voz
+                          </td>
+
+                          <td className="py-3 px-4">
+                            <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700 border border-slate-200">
+                              <Building2 className="h-3 w-3 text-slate-500" />
+                              {u.estamentoName || 'Sin estamento'}
                             </span>
-                          )}
-                        </td>
+                          </td>
 
-                        <td className="py-3 px-4 font-mono text-[11px] text-slate-600">
-                          {u.periodo || '2026 - 2028'}
-                        </td>
-
-                        <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={() => switchUser(u.id)}
-                              className="text-[11px] font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded"
-                              title="Asumir este perfil"
-                            >
-                              Simular
-                            </button>
-                            <button
-                              onClick={() => openEditMemberModal(u)}
-                              className="p-1 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-100"
-                              title="Editar miembro"
-                            >
-                              <Edit3 className="h-3.5 w-3.5" />
-                            </button>
-                            {users.length > 1 && (
-                              <button
-                                onClick={() => {
-                                  if (confirm(`¿Confirma eliminar al miembro ${u.name}?`)) {
-                                    deleteUser(u.id);
-                                  }
-                                }}
-                                className="p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-slate-100"
-                                title="Eliminar miembro"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
+                          <td className="py-3 px-4 text-center">
+                            {u.hasVote !== false && u.role !== 'invitado_externo' ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                <CheckCircle2 className="h-3 w-3 text-emerald-600" /> Voz y Voto
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                                <Vote className="h-3 w-3 text-slate-400" /> Solo Voz
+                              </span>
                             )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                          </td>
+
+                          <td className="py-3 px-4 font-mono text-[11px] text-slate-600">
+                            {u.periodo || '2026 - 2028'}
+                          </td>
+
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => switchUser(u.id)}
+                                className="text-[11px] font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded cursor-pointer"
+                                title="Asumir este perfil en sesión"
+                              >
+                                Simular
+                              </button>
+                              <button
+                                onClick={() => openEditMemberModal(u)}
+                                className="p-1 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-100 cursor-pointer"
+                                title="Editar miembro y programas"
+                              >
+                                <Edit3 className="h-3.5 w-3.5" />
+                              </button>
+                              {u.role !== 'super_admin' && (
+                                <button
+                                  onClick={() => {
+                                    if (confirm(`¿Eliminar al miembro ${u.name}?`)) {
+                                      deleteUser(u.id);
+                                    }
+                                  }}
+                                  className="p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-slate-100 cursor-pointer"
+                                  title="Dar de baja"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -507,25 +762,231 @@ export const Module_Admin: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 2: GESTIÓN DE ROLES DEL COMITÉ */}
+      {/* TAB 2: MÓDULO EXCLUSIVO DEL ADMINISTRADOR PARA CREAR Y GESTIONAR PROGRAMAS DE LA FACULTAD */}
+      {activeTab === 'programs' && (
+        <div className="space-y-4">
+          {/* Admin Exclusive Top Banner */}
+          <div className="bg-gradient-to-r from-[#006837] via-[#004D25] to-[#002D15] rounded-xl p-4 text-white shadow-md border border-[#E59800]/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <GraduationCap className="h-5 w-5 text-[#E58A13]" />
+                <h3 className="text-sm font-bold tracking-tight uppercase">
+                  Gestión Exclusiva de Programas Académicos de la Facultad
+                </h3>
+                <span className="text-[9px] bg-[#E58A13] text-slate-950 font-black px-2 py-0.5 rounded-md uppercase">
+                  Control Administrativo
+                </span>
+              </div>
+              <p className="text-xs text-emerald-100/90 max-w-2xl leading-relaxed">
+                Configure los programas de pregrado, posgrado y tecnologías de la Facultad de Ingeniería. Cada programa opera con su propio comité curricular, actas, votaciones nominales y planes de autoevaluación.
+              </p>
+            </div>
+
+            {isAdmin && (
+              <button
+                onClick={openNewProgramModal}
+                className="inline-flex items-center gap-2 bg-[#E58A13] hover:bg-[#d07b0e] text-slate-950 px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-md shrink-0 cursor-pointer"
+              >
+                <Plus className="h-4 w-4" />
+                Crear Nuevo Programa
+              </button>
+            )}
+          </div>
+
+          {/* Search bar & quick stats */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+            <div className="flex items-center gap-3 text-xs text-slate-600">
+              <span className="font-semibold text-slate-900">
+                Total Programas: <strong className="text-[#006837] font-mono text-sm">{programs.length}</strong>
+              </span>
+              <span className="h-4 w-px bg-slate-200" />
+              <span>
+                Activos: <strong className="text-emerald-700">{programs.filter(p => p.active).length}</strong>
+              </span>
+              <span className="h-4 w-px bg-slate-200" />
+              <span>
+                Facultad: <strong>Facultad de Ingeniería</strong>
+              </span>
+            </div>
+
+            <div className="relative min-w-[260px]">
+              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+              <input
+                type="text"
+                value={programSearch}
+                onChange={(e) => setProgramSearch(e.target.value)}
+                placeholder="Buscar programa por código, nombre, director o SNIES..."
+                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#006837]"
+              />
+            </div>
+          </div>
+
+          {/* Programs Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filteredPrograms.length === 0 ? (
+              <div className="col-span-2 bg-white rounded-xl border border-slate-200 p-8 text-center text-xs text-slate-400">
+                No se encontraron programas académicos que coincidan con la búsqueda.
+              </div>
+            ) : (
+              filteredPrograms.map((prog) => {
+                // Compute metrics for this program
+                const assignedMembersCount = users.filter((u) => 
+                  (u.programIds && u.programIds.includes(prog.id)) || u.primaryProgramId === prog.id
+                ).length;
+
+                const programMeetingsCount = meetings.filter((m) => m.programId === prog.id).length;
+                const programCommitmentsCount = commitments.filter((c) => c.programId === prog.id).length;
+                const isActiveFilter = activeProgramId === prog.id;
+
+                return (
+                  <div 
+                    key={prog.id}
+                    className={`rounded-xl border bg-white p-4.5 shadow-xs transition-all relative flex flex-col justify-between ${
+                      isActiveFilter 
+                        ? 'border-[#006837] ring-2 ring-[#006837]/20 bg-emerald-50/20' 
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <div>
+                      {/* Header of Program Card */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className={`px-2.5 py-1 rounded-lg text-xs font-mono font-black border ${getProgramBadgeClasses(prog.color)}`}>
+                            {prog.code}
+                          </span>
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-sm text-slate-900 leading-snug truncate">
+                              {prog.name}
+                            </h4>
+                            <span className="text-[10px] text-slate-500 font-medium capitalize">
+                              Nivel: {prog.level} · {prog.faculty || 'Facultad de Ingeniería'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            prog.active 
+                              ? 'bg-emerald-100 text-emerald-800' 
+                              : 'bg-slate-100 text-slate-500'
+                          }`}>
+                            {prog.active ? 'Activo' : 'Inactivo'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* SNIES & Director */}
+                      <div className="mt-3.5 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-[10px] text-slate-400 font-medium block">Código SNIES (MEN):</span>
+                          <span className="font-mono font-semibold text-slate-800">
+                            {prog.sniesCode || 'En trámite'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 font-medium block">Director / Coordinador:</span>
+                          <span className="font-semibold text-slate-800 truncate block" title={prog.directorName}>
+                            {prog.directorName || 'No asignado'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Description */}
+                      {prog.description && (
+                        <p className="mt-2 text-[11px] text-slate-600 line-clamp-2 leading-relaxed">
+                          {prog.description}
+                        </p>
+                      )}
+
+                      {/* Multiprogram Stats */}
+                      <div className="mt-3.5 grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-150 text-center">
+                        <div>
+                          <span className="text-[10px] text-slate-500 block">Miembros Comité</span>
+                          <span className="font-mono text-xs font-bold text-slate-900">
+                            {assignedMembersCount}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-500 block">Sesiones / Actas</span>
+                          <span className="font-mono text-xs font-bold text-slate-900">
+                            {programMeetingsCount}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-500 block">Compromisos</span>
+                          <span className="font-mono text-xs font-bold text-slate-900">
+                            {programCommitmentsCount}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer Actions */}
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                      <button
+                        onClick={() => setActiveProgramId(prog.id)}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                          isActiveFilter
+                            ? 'bg-[#006837] text-white font-bold shadow-2xs'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                        }`}
+                        title="Filtrar todo el sistema de actas y compromisos para este programa"
+                      >
+                        <ArrowRight className="h-3 w-3" />
+                        {isActiveFilter ? 'Filtro Actual del Sistema' : 'Filtrar Sistema'}
+                      </button>
+
+                      <div className="flex items-center gap-1">
+                        {isAdmin && (
+                          <>
+                            <button
+                              onClick={() => handleToggleProgramActive(prog)}
+                              className={`p-1.5 rounded text-xs transition-colors cursor-pointer ${
+                                prog.active ? 'text-amber-600 hover:bg-amber-50' : 'text-emerald-600 hover:bg-emerald-50'
+                              }`}
+                              title={prog.active ? 'Desactivar programa' : 'Activar programa'}
+                            >
+                              {prog.active ? 'Pausar' : 'Activar'}
+                            </button>
+                            <button
+                              onClick={() => openEditProgramModal(prog)}
+                              className="p-1.5 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-100 cursor-pointer"
+                              title="Editar configuración del programa"
+                            >
+                              <Edit3 className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteProgramConfirm(prog.id, prog.name)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 rounded hover:bg-slate-100 cursor-pointer"
+                              title="Eliminar programa"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: GESTIÓN DE ROLES ESTATUTARIOS */}
       {activeTab === 'roles' && (
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-indigo-50/80 via-white to-purple-50/60 p-4 rounded-xl border border-indigo-200 shadow-xs">
+          <div className="flex items-center justify-between bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold uppercase tracking-wider mb-1">
-                <Shield className="h-3 w-3" />
-                Facultad Exclusiva del Super Administrador
-              </div>
-              <h3 className="text-sm font-bold text-slate-900">
-                Roles Estatutarios del Comité Curricular ({customRoles.length})
-              </h3>
-              <p className="text-xs text-slate-600 mt-0.5">
-                Los roles dentro del comité son creados y configurados por el Super Administrador (<span className="font-mono text-indigo-700">autoevaluacionycurriculomecanica@umayor.edu.co</span>), definiendo voz, voto nominal, firma de actas y auditoría.
+              <h3 className="text-sm font-bold text-slate-900">Catálogo de Roles Institucionales</h3>
+              <p className="text-xs text-slate-500">
+                Roles asignables a miembros de comités curriculares en la facultad.
               </p>
             </div>
             <button
               onClick={openNewRoleModal}
-              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-indigo-700 transition-colors shadow-xs shrink-0"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 transition-colors shadow-xs cursor-pointer"
             >
               <Plus className="h-3.5 w-3.5" />
               Crear Nuevo Rol
@@ -534,65 +995,65 @@ export const Module_Admin: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {customRoles.map((r) => (
-              <div
-                key={r.id}
-                className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-3 flex flex-col justify-between"
-              >
-                <div className="space-y-2">
+              <div key={r.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs flex flex-col justify-between">
+                <div>
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                    <span className="font-mono text-[10px] font-bold text-slate-600 uppercase bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                       {r.code}
                     </span>
-                    <span className="text-[10px] uppercase font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
-                      Permiso: {r.baseCapability}
+                    <span className="text-[10px] font-semibold text-slate-500 uppercase">
+                      Base: {r.baseCapability}
                     </span>
                   </div>
 
-                  <h4 className="text-sm font-bold text-slate-900">{r.name}</h4>
-                  <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-2">
+                  <h4 className="font-bold text-slate-900 text-sm mt-2">{r.name}</h4>
+                  <p className="text-xs text-slate-600 mt-1 line-clamp-2 leading-relaxed">
                     {r.description}
                   </p>
 
-                  {/* Capabilities Badges */}
-                  <div className="pt-2 border-t border-slate-100 flex flex-wrap gap-1.5 text-[10px]">
-                    <span className={`px-2 py-0.5 rounded font-semibold ${r.canVote ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-slate-100 text-slate-400'}`}>
-                      {r.canVote ? '✓ Voto Nominal' : '― Sin Voto'}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded font-semibold ${r.canSign ? 'bg-purple-50 text-purple-800 border border-purple-200' : 'bg-slate-100 text-slate-400'}`}>
-                      {r.canSign ? '✓ Firma Digital' : '― Sin Firma'}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded font-semibold ${r.canAudit ? 'bg-blue-50 text-blue-800 border border-blue-200' : 'bg-slate-100 text-slate-400'}`}>
-                      {r.canAudit ? '✓ Auditoría' : '― Sin Auditoría'}
-                    </span>
+                  <div className="mt-3 pt-3 border-t border-slate-100 space-y-1.5 text-[11px]">
+                    <div className="flex items-center justify-between text-slate-600">
+                      <span>Voto Nominal:</span>
+                      <strong className={r.canVote ? 'text-emerald-700' : 'text-slate-400'}>
+                        {r.canVote ? 'Habilitado' : 'Sin voto'}
+                      </strong>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-600">
+                      <span>Firma de Actas:</span>
+                      <strong className={r.canSign ? 'text-emerald-700' : 'text-slate-400'}>
+                        {r.canSign ? 'Autorizado' : 'No'}
+                      </strong>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-600">
+                      <span>Auditoría de Compromisos:</span>
+                      <strong className={r.canAudit ? 'text-emerald-700' : 'text-slate-400'}>
+                        {r.canAudit ? 'Autorizado' : 'No'}
+                      </strong>
+                    </div>
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="text-slate-400 text-[10px]">
-                    {users.filter(u => u.customRoleId === r.id || u.role === r.baseCapability).length} miembros asignados
-                  </span>
-                  <div className="flex items-center gap-1">
+                <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end gap-1.5">
+                  <button
+                    onClick={() => openEditRoleModal(r)}
+                    className="p-1 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-100 cursor-pointer"
+                    title="Editar rol"
+                  >
+                    <Edit3 className="h-3.5 w-3.5" />
+                  </button>
+                  {r.id !== 'rol-superadmin' && r.id !== 'rol-pres' && (
                     <button
-                      onClick={() => openEditRoleModal(r)}
-                      className="p-1 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-100"
-                      title="Editar rol"
+                      onClick={() => {
+                        if (confirm(`¿Eliminar rol ${r.name}?`)) {
+                          deleteCustomRole(r.id);
+                        }
+                      }}
+                      className="p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-slate-100 cursor-pointer"
+                      title="Eliminar rol"
                     >
-                      <Edit3 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </button>
-                    {customRoles.length > 1 && (
-                      <button
-                        onClick={() => {
-                          if (confirm(`¿Confirma eliminar el rol ${r.name}?`)) {
-                            deleteCustomRole(r.id);
-                          }
-                        }}
-                        className="p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-slate-100"
-                        title="Eliminar rol"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -600,78 +1061,65 @@ export const Module_Admin: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 3: GESTIÓN DE ESTAMENTOS DE REPRESENTACIÓN */}
+      {/* TAB 4: GESTIÓN DE ESTAMENTOS ESTATUTARIOS */}
       {activeTab === 'estamentos' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                Estamentos Universitarios de Representación ({estamentos.length})
-              </h3>
-              <p className="text-[11px] text-slate-500">
-                Cuerpos colegiados estatutarios representados en el Comité Curricular (Docentes, Estudiantes, Egresados, etc.)
+              <h3 className="text-sm font-bold text-slate-900">Estamentos de Representación Universitaria</h3>
+              <p className="text-xs text-slate-500">
+                Cuerpos colegiados representados en los comités curriculares de la facultad.
               </p>
             </div>
             <button
               onClick={openNewEstamentoModal}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 transition-colors shadow-xs"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 transition-colors shadow-xs cursor-pointer"
             >
               <Plus className="h-3.5 w-3.5" />
-              Crear Nuevo Estamento
+              Nuevo Estamento
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {estamentos.map((est) => (
-              <div
-                key={est.id}
-                className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-3 flex flex-col justify-between"
-              >
-                <div className="space-y-2">
+              <div key={est.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs flex flex-col justify-between">
+                <div>
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                    <span className="font-mono text-[10px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                       {est.code}
                     </span>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${est.hasVote ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-slate-100 text-slate-600'}`}>
-                      {est.hasVote ? 'Con Voto Reglamentario' : 'Voz Consultiva'}
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                      est.hasVote ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {est.hasVote ? 'Voz y Voto' : 'Solo Voz'}
                     </span>
                   </div>
 
-                  <h4 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                    <Building2 className="h-4 w-4 text-slate-600" />
-                    {est.name}
-                  </h4>
-                  <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-3">
+                  <h4 className="font-bold text-slate-900 text-sm mt-2">{est.name}</h4>
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
                     {est.description}
                   </p>
                 </div>
 
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="text-slate-500 font-medium text-[11px]">
-                    {users.filter(u => u.estamentoId === est.id).length} miembros activos
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => openEditEstamentoModal(est)}
-                      className="p-1 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-100"
-                      title="Editar estamento"
-                    >
-                      <Edit3 className="h-3.5 w-3.5" />
-                    </button>
-                    {estamentos.length > 1 && (
-                      <button
-                        onClick={() => {
-                          if (confirm(`¿Confirma eliminar el estamento ${est.name}?`)) {
-                            deleteEstamento(est.id);
-                          }
-                        }}
-                        className="p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-slate-100"
-                        title="Eliminar estamento"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
+                <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end gap-1.5">
+                  <button
+                    onClick={() => openEditEstamentoModal(est)}
+                    className="p-1 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-100 cursor-pointer"
+                    title="Editar estamento"
+                  >
+                    <Edit3 className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm(`¿Eliminar estamento ${est.name}?`)) {
+                        deleteEstamento(est.id);
+                      }
+                    }}
+                    className="p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-slate-100 cursor-pointer"
+                    title="Eliminar estamento"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               </div>
             ))}
@@ -679,32 +1127,34 @@ export const Module_Admin: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 4: ACTIVOS DE MARCA & GUÍA DE USO INSTITUCIONAL */}
-      {activeTab === 'brand_assets' && <BrandAssetsManager />}
-
       {/* TAB 5: PERSONALIZACIÓN DEL LOGOTIPO Y BANNER (SOLO SUPER ADMINISTRADOR) */}
       {activeTab === 'brand_customization' && <SuperAdminBrandingManager />}
 
-      {/* Modal: Crear / Editar Miembro */}
+      {/* MODAL 1: REGISTRAR / EDITAR MIEMBRO CON ASOCIACIÓN MULTIPROGRAMA */}
       {showMemberModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-bold text-slate-900">
-                {editingUserId ? 'Editar Miembro del Comité' : 'Registrar Nuevo Integrante del Comité'}
-              </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs overflow-y-auto">
+          <div className="relative w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 my-8">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  {editingUserId ? 'Editar Integrante del Comité' : 'Registrar Nuevo Integrante'}
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Asigne los roles, estamento y programas de la facultad a los que pertenece.
+                </p>
+              </div>
               <button
                 onClick={() => setShowMemberModal(false)}
-                className="text-slate-400 hover:text-slate-600 font-bold"
+                className="text-slate-400 hover:text-slate-600 font-bold cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleSaveMember} className="space-y-3.5 text-xs">
+            <form onSubmit={handleSaveMember} className="space-y-3.5 text-xs max-h-[75vh] overflow-y-auto pr-1">
               <div>
                 <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                  Nombre Completo con Títulos Académicos
+                  Nombre Completo con Títulos Académicos *
                 </label>
                 <input
                   type="text"
@@ -712,13 +1162,13 @@ export const Module_Admin: React.FC = () => {
                   value={memberName}
                   onChange={(e) => setMemberName(e.target.value)}
                   placeholder="Ej. Dr. Mario Alberto Torres Cadena"
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#006837]"
                 />
               </div>
 
               <div>
                 <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                  Correo Electrónico Institucional
+                  Correo Electrónico Institucional *
                 </label>
                 <input
                   type="email"
@@ -726,8 +1176,97 @@ export const Module_Admin: React.FC = () => {
                   value={memberEmail}
                   onChange={(e) => setMemberEmail(e.target.value)}
                   placeholder="mario.torres@umayor.edu.co"
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#006837]"
                 />
+              </div>
+
+              {/* ASOCIACIÓN A MÚLTIPLES PROGRAMAS DE LA FACULTAD (REQUERIMIENTO MULTIPROGRAMA) */}
+              <div className="p-3 bg-emerald-50/50 border border-emerald-200 rounded-xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <GraduationCap className="h-4 w-4 text-[#006837]" />
+                    <label className="text-[11px] font-bold text-[#006837] uppercase tracking-wide">
+                      Asociación a Programas de la Facultad (Multiprograma) *
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSelectAllProgramsForMember}
+                      className="text-[10px] text-[#006837] hover:underline font-semibold cursor-pointer"
+                    >
+                      Seleccionar Todos
+                    </button>
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-600">
+                  Seleccione uno o más programas curriculares en los que este miembro participa simultáneamente:
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                  {programs.map((prog) => {
+                    const isChecked = memberProgramIds.includes(prog.id);
+                    const isPrimary = memberPrimaryProgramId === prog.id;
+
+                    return (
+                      <div
+                        key={prog.id}
+                        onClick={() => handleToggleMemberProgram(prog.id)}
+                        className={`flex items-start gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
+                          isChecked
+                            ? 'bg-white border-[#006837] shadow-2xs'
+                            : 'bg-white/60 border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {}} // handled by div
+                          className="mt-0.5 rounded text-[#006837] focus:ring-[#006837]"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-bold text-[11px] text-slate-900 truncate">
+                              {prog.code}
+                            </span>
+                            {isChecked && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setMemberPrimaryProgramId(prog.id);
+                                }}
+                                className={`text-[9px] px-1 py-0.2 rounded font-bold cursor-pointer transition-colors ${
+                                  isPrimary
+                                    ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                                    : 'text-slate-400 hover:text-slate-700'
+                                }`}
+                                title="Fijar como programa principal de adscripción"
+                              >
+                                {isPrimary ? '★ Principal' : 'Hacer Principal'}
+                              </button>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-slate-500 truncate">{prog.name}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {memberProgramIds.length > 0 && (
+                  <div className="pt-1.5 flex items-center justify-between text-[10px] text-slate-600 border-t border-emerald-100">
+                    <span>
+                      Asociado a: <strong>{memberProgramIds.length} programa(s)</strong>
+                    </span>
+                    <span>
+                      Principal:{' '}
+                      <strong className="text-[#006837]">
+                        {programs.find((p) => p.id === memberPrimaryProgramId)?.name || 'Sin fijar'}
+                      </strong>
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -829,24 +1368,24 @@ export const Module_Admin: React.FC = () => {
                   value={memberPassword}
                   onChange={(e) => setMemberPassword(e.target.value)}
                   placeholder="Ej. ClaveSegura2026* o PIN numérico"
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#006837]"
                 />
                 <p className="text-[10px] text-slate-400 mt-1">
-                  Esta credencial es obligatoria para ingresar al sistema desde el portal de inicio de sesión.
+                  Esta credencial se utiliza para el acceso institucional del miembro al sistema.
                 </p>
               </div>
 
-              <div className="pt-2 border-t border-slate-100 flex justify-end gap-2">
+              <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowMemberModal(false)}
-                  className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 shadow-xs"
+                  className="rounded-lg bg-[#006837] px-4 py-2 text-xs font-semibold text-white hover:bg-[#004D25] shadow-xs cursor-pointer"
                 >
                   {editingUserId ? 'Guardar Cambios' : 'Registrar Miembro'}
                 </button>
@@ -856,17 +1395,223 @@ export const Module_Admin: React.FC = () => {
         </div>
       )}
 
-      {/* Modal: Crear / Editar Rol */}
+      {/* MODAL 2: CREAR / EDITAR PROGRAMA ACADÉMICO (EXCLUSIVO DEL ADMINISTRADOR) */}
+      {showProgramModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs overflow-y-auto">
+          <div className="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 my-8">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+              <div className="flex items-center gap-2">
+                <GraduationCap className="h-5 w-5 text-[#006837]" />
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    {editingProgramId ? 'Editar Programa Académico' : 'Crear Nuevo Programa Académico'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Parametrización oficial para comités curriculares y autoevaluación.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowProgramModal(false)}
+                className="text-slate-400 hover:text-slate-600 font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProgram} className="space-y-3.5 text-xs max-h-[75vh] overflow-y-auto pr-1">
+              <div className="grid grid-cols-3 gap-2">
+                <div className="col-span-2">
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                    Nombre del Programa Académico *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={progName}
+                    onChange={(e) => setProgName(e.target.value)}
+                    placeholder="Ej. Ingeniería Mecánica"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#006837]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                    Sigla / Código *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={progCode}
+                    onChange={(e) => setProgCode(e.target.value)}
+                    placeholder="ING-MEC"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-mono uppercase text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#006837]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                    Nivel Académico *
+                  </label>
+                  <select
+                    value={progLevel}
+                    onChange={(e) => setProgLevel(e.target.value as AcademicLevel)}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 font-medium"
+                  >
+                    <option value="pregrado">Pregrado Profesional</option>
+                    <option value="tecnologia">Tecnología</option>
+                    <option value="especializacion">Especialización</option>
+                    <option value="maestria">Maestría</option>
+                    <option value="postgrado">Otro Posgrado</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                    Código SNIES (MEN)
+                  </label>
+                  <input
+                    type="text"
+                    value={progSnies}
+                    onChange={(e) => setProgSnies(e.target.value)}
+                    placeholder="Ej. 108420"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-mono text-slate-900"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                  Facultad Adscrita
+                </label>
+                <input
+                  type="text"
+                  value={progFaculty}
+                  onChange={(e) => setProgFaculty(e.target.value)}
+                  placeholder="Facultad de Ingeniería"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                    Director(a) o Coordinador(a)
+                  </label>
+                  <input
+                    type="text"
+                    value={progDirectorName}
+                    onChange={(e) => setProgDirectorName(e.target.value)}
+                    placeholder="Ej. Ing. Carlos Mario Gómez"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                    Correo del Director / Programa
+                  </label>
+                  <input
+                    type="email"
+                    value={progDirectorEmail}
+                    onChange={(e) => setProgDirectorEmail(e.target.value)}
+                    placeholder="director.mecanica@umayor.edu.co"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-mono text-slate-900"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                  Color Distintivo del Programa
+                </label>
+                <div className="flex items-center gap-2">
+                  {[
+                    { id: 'emerald', label: 'Esmeralda', bg: 'bg-emerald-600' },
+                    { id: 'blue', label: 'Azul', bg: 'bg-blue-600' },
+                    { id: 'amber', label: 'Ámbar', bg: 'bg-amber-600' },
+                    { id: 'purple', label: 'Púrpura', bg: 'bg-purple-600' },
+                    { id: 'indigo', label: 'Índigo', bg: 'bg-indigo-600' },
+                    { id: 'teal', label: 'Turquesa', bg: 'bg-teal-600' },
+                    { id: 'rose', label: 'Rosa', bg: 'bg-rose-600' },
+                  ].map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setProgColor(c.id)}
+                      className={`h-7 w-7 rounded-full ${c.bg} flex items-center justify-center transition-transform cursor-pointer ${
+                        progColor === c.id ? 'ring-2 ring-offset-2 ring-slate-900 scale-110' : 'opacity-80 hover:opacity-100'
+                      }`}
+                      title={c.label}
+                    >
+                      {progColor === c.id && <Check className="h-3.5 w-3.5 text-white" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                  Descripción / Alcance Curricular
+                </label>
+                <textarea
+                  rows={2}
+                  value={progDescription}
+                  onChange={(e) => setProgDescription(e.target.value)}
+                  placeholder="Detalles del perfil, acreditación o propósitos de formación del programa..."
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900"
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-200">
+                <span className="text-[11px] font-semibold text-slate-800">
+                  ¿Programa Activo en el Sistema?
+                </span>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={progActive}
+                    onChange={(e) => setProgActive(e.target.checked)}
+                    className="rounded text-[#006837] focus:ring-[#006837]"
+                  />
+                  <span className="text-xs font-bold text-slate-900">
+                    {progActive ? 'Sí (Activo)' : 'No (Pausado)'}
+                  </span>
+                </label>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowProgramModal(false)}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-[#006837] px-4 py-2 text-xs font-semibold text-white hover:bg-[#004D25] shadow-xs cursor-pointer"
+                >
+                  {editingProgramId ? 'Guardar Cambios' : 'Crear Programa'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: CREAR / EDITAR ROL ESTATUTARIO */}
       {showRoleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs">
+          <div className="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <h3 className="text-base font-bold text-slate-900">
-                {editingRoleId ? 'Editar Rol' : 'Crear Nuevo Rol del Comité'}
+                {editingRoleId ? 'Editar Rol Estatutario' : 'Crear Nuevo Rol Institucional'}
               </h3>
               <button
                 onClick={() => setShowRoleModal(false)}
-                className="text-slate-400 hover:text-slate-600 font-bold"
+                className="text-slate-400 hover:text-slate-600 font-bold cursor-pointer"
               >
                 ✕
               </button>
@@ -876,27 +1621,27 @@ export const Module_Admin: React.FC = () => {
               <div className="grid grid-cols-3 gap-2">
                 <div className="col-span-2">
                   <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                    Denominación del Rol
+                    Nombre del Rol
                   </label>
                   <input
                     type="text"
                     required
                     value={roleName}
                     onChange={(e) => setRoleName(e.target.value)}
-                    placeholder="Ej. Representante Docente Principal"
+                    placeholder="Ej. Delegado de Acreditación"
                     className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                    Código
+                    Código Sigla
                   </label>
                   <input
                     type="text"
                     required
                     value={roleCode}
                     onChange={(e) => setRoleCode(e.target.value)}
-                    placeholder="REP_DOC"
+                    placeholder="DEL_ACR"
                     className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-mono uppercase text-slate-900"
                   />
                 </div>
@@ -909,13 +1654,13 @@ export const Module_Admin: React.FC = () => {
                 <select
                   value={roleBaseCap}
                   onChange={(e) => setRoleBaseCap(e.target.value as UserRole)}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 font-semibold"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 font-medium"
                 >
-                  <option value="presidente">Presidente (Control Total, Minuta & Firma)</option>
-                  <option value="miembro">Miembro (Deliberación & Voto Nominal)</option>
-                  <option value="seguimiento">Encargado de Seguimiento (Auditoría)</option>
-                  <option value="autoevaluacion">Gestor de Autoevaluación (Calidad CNA/ABET)</option>
-                  <option value="invitado_externo">Invitado Externo (Acceso Restringido a Tareas)</option>
+                  <option value="presidente">Presidente (Convocatoria y Firma)</option>
+                  <option value="miembro">Miembro del Comité (Voz y Voto)</option>
+                  <option value="seguimiento">Seguimiento (Auditoría de Compromisos)</option>
+                  <option value="autoevaluacion">Autoevaluación (Mapeo Calidad CNA/ABET)</option>
+                  <option value="invitado_externo">Invitado Externo (Solo Consulta y Radicación)</option>
                 </select>
               </div>
 
@@ -927,66 +1672,72 @@ export const Module_Admin: React.FC = () => {
                   rows={2}
                   value={roleDesc}
                   onChange={(e) => setRoleDesc(e.target.value)}
-                  placeholder="Funciones y alcance de este rol según el reglamento del comité..."
+                  placeholder="Responsabilidades y atribuciones en el comité..."
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900"
                 />
               </div>
 
-              <div className="space-y-1.5 pt-1 border-t border-slate-100">
-                <span className="font-bold text-slate-700 text-[10px] uppercase">
-                  Prerrogativas Específicas:
-                </span>
-                <div className="grid grid-cols-2 gap-2 text-[11px]">
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={roleCanVote}
-                      onChange={(e) => setRoleCanVote(e.target.checked)}
-                      className="rounded text-slate-900"
-                    />
-                    <span>Voto Nominal en Mociones</span>
-                  </label>
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={roleCanSign}
-                      onChange={(e) => setRoleCanSign(e.target.checked)}
-                      className="rounded text-slate-900"
-                    />
-                    <span>Firma Digital de Actas</span>
-                  </label>
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={roleCanAudit}
-                      onChange={(e) => setRoleCanAudit(e.target.checked)}
-                      className="rounded text-slate-900"
-                    />
-                    <span>Auditoría de Compromisos</span>
-                  </label>
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={roleCanTagQuality}
-                      onChange={(e) => setRoleCanTagQuality(e.target.checked)}
-                      className="rounded text-slate-900"
-                    />
-                    <span>Indexación Calidad CNA/ABET</span>
-                  </label>
-                </div>
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
+                <label className="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-50">
+                  <input
+                    type="checkbox"
+                    checked={roleCanVote}
+                    onChange={(e) => setRoleCanVote(e.target.checked)}
+                    className="rounded text-slate-900"
+                  />
+                  <span className="text-[11px] font-medium text-slate-800">
+                    Voto Nominal en Plenaria
+                  </span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-50">
+                  <input
+                    type="checkbox"
+                    checked={roleCanSign}
+                    onChange={(e) => setRoleCanSign(e.target.checked)}
+                    className="rounded text-slate-900"
+                  />
+                  <span className="text-[11px] font-medium text-slate-800">
+                    Firma Digital de Actas
+                  </span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-50">
+                  <input
+                    type="checkbox"
+                    checked={roleCanAudit}
+                    onChange={(e) => setRoleCanAudit(e.target.checked)}
+                    className="rounded text-slate-900"
+                  />
+                  <span className="text-[11px] font-medium text-slate-800">
+                    Auditar Compromisos
+                  </span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer p-1.5 rounded hover:bg-slate-50">
+                  <input
+                    type="checkbox"
+                    checked={roleCanTagQuality}
+                    onChange={(e) => setRoleCanTagQuality(e.target.checked)}
+                    className="rounded text-slate-900"
+                  />
+                  <span className="text-[11px] font-medium text-slate-800">
+                    Mapeo Calidad CNA/ABET
+                  </span>
+                </label>
               </div>
 
               <div className="pt-2 border-t border-slate-100 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowRoleModal(false)}
-                  className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 shadow-xs"
+                  className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 shadow-xs cursor-pointer"
                 >
                   Guardar Rol
                 </button>
@@ -996,17 +1747,17 @@ export const Module_Admin: React.FC = () => {
         </div>
       )}
 
-      {/* Modal: Crear / Editar Estamento */}
+      {/* MODAL 4: CREAR / EDITAR ESTAMENTO */}
       {showEstamentoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs">
+          <div className="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <h3 className="text-base font-bold text-slate-900">
-                {editingEstamentoId ? 'Editar Estamento' : 'Registrar Estamento de Representación'}
+                {editingEstamentoId ? 'Editar Estamento' : 'Nuevo Estamento Universitario'}
               </h3>
               <button
                 onClick={() => setShowEstamentoModal(false)}
-                className="text-slate-400 hover:text-slate-600 font-bold"
+                className="text-slate-400 hover:text-slate-600 font-bold cursor-pointer"
               >
                 ✕
               </button>
@@ -1076,13 +1827,13 @@ export const Module_Admin: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowEstamentoModal(false)}
-                  className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 shadow-xs"
+                  className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 shadow-xs cursor-pointer"
                 >
                   Guardar Estamento
                 </button>

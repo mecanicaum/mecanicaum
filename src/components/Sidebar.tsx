@@ -11,7 +11,6 @@ import {
   UserCog,
   LogOut
 } from 'lucide-react';
-import { UmayorLogo } from './UmayorLogo';
 
 interface SidebarProps {
   currentTab: string;
@@ -73,7 +72,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
     {
       id: 'modulo_admin',
       label: 'F. Administración del comité',
-      sublabel: 'Miembros, roles, estamentos y marca',
+      sublabel: 'Programas, miembros, roles y estamentos',
       icon: UserCog,
       roles: ['super_admin', 'presidente', 'autoevaluacion', 'seguimiento', 'miembro'],
     },
@@ -82,11 +81,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
   return (
     <aside className="w-64 lg:w-72 shrink-0 border-r border-[#E2E8F0] bg-white flex flex-col justify-between h-[calc(100vh-6rem)] sticky top-24 select-none rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.05)] my-2">
       <div className="p-3.5 space-y-4 overflow-y-auto">
-        {/* Institutional Branding Badge */}
-        <div className="p-2 bg-[#F8FAF8] rounded-xl border border-[#E2E8F0] shadow-2xs flex items-center justify-center">
-          <UmayorLogo size="sm" variant="full" showSubtext={true} />
-        </div>
-
         {/* Active Role Card */}
         <div className={`rounded-xl border p-3.5 shadow-xs ${
           currentUser.role === 'super_admin'
@@ -126,6 +120,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
               {currentUser.role === 'invitado_externo' && 'Solo tareas'}
             </span>
           </div>
+
+          {currentUser.programIds && currentUser.programIds.length > 0 && (
+            <div className="mt-2 pt-1.5 border-t border-[#E2E8F0] flex items-center justify-between text-[10px]">
+              <span className="text-[#4A5568]">Programas adscritos:</span>
+              <span className="font-mono font-bold text-[#006A4E] bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                {currentUser.programIds.length} comités
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Navigation Modules */}

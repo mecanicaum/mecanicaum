@@ -126,7 +126,7 @@ export const PublicActVerificationView: React.FC<PublicActVerificationViewProps>
       <header className="border-b border-[#E59800]/40 bg-[#006837] text-white sticky top-0 z-40 shadow-[0_4px_12px_rgba(0,104,55,0.15)]">
         <div className="max-w-6xl mx-auto px-4 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <UmayorLogo size="md" variant="badge" showSubtext={true} />
+            <UmayorLogo size="md" variant="badge" />
             <div className="hidden sm:block border-l border-white/20 pl-3">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-heading font-extrabold uppercase tracking-wider text-[#E59800]">

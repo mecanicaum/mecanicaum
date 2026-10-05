@@ -27,6 +27,23 @@ export interface CustomRole {
   canTagQuality: boolean;
 }
 
+export type AcademicLevel = 'pregrado' | 'postgrado' | 'tecnologia' | 'maestria' | 'especializacion';
+
+export interface AcademicProgram {
+  id: string;
+  code: string; // e.g. "ING-MEC", "ING-SIS", "ING-CIV"
+  name: string; // e.g. "Ingeniería Mecánica"
+  level: AcademicLevel;
+  faculty: string; // e.g. "Facultad de Ingeniería"
+  sniesCode?: string; // Código SNIES oficial Ministerio de Educación Nacional
+  directorName?: string; // Director(a) o Coordinador(a)
+  directorEmail?: string;
+  active: boolean;
+  color?: string; // e.g. "emerald", "blue", "amber", "purple", "indigo", "teal", "rose"
+  description?: string;
+  createdAt: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -45,6 +62,8 @@ export interface User {
   periodo?: string; // e.g. "2026 - 2028"
   active?: boolean;
   password?: string;
+  programIds?: string[]; // IDs de programas de la facultad a los que pertenece
+  primaryProgramId?: string; // Programa principal de adscripción
 }
 
 export type MeetingType = 'ordinaria' | 'extraordinaria';
@@ -76,6 +95,9 @@ export interface Meeting {
   closedAt?: string;
   signedByPresident?: boolean;
   presidentSignatureDate?: string;
+  programId?: string; // ID del programa de la facultad
+  programName?: string;
+  programCode?: string;
 }
 
 export interface AgendaItem {
@@ -159,6 +181,8 @@ export interface Commitment {
   auditedAt?: string;
   lastReminderSentAt?: string;
   reminderCount?: number;
+  programId?: string;
+  programName?: string;
 }
 
 // Modelado de Nomenclaturas de Calidad CNA / ABET
@@ -200,6 +224,8 @@ export interface ActQualityMapping {
   evidentialContribution: string;
   mappedBy: string;
   mappedAt: string;
+  programId?: string;
+  programName?: string;
 }
 
 export interface AccessRequest {
@@ -244,6 +270,8 @@ export interface DigitalActSeal {
   totalVoters: number;
   totalAgreements: number;
   totalCommitments: number;
+  programId?: string;
+  programName?: string;
 }
 
 export interface UserSettings {

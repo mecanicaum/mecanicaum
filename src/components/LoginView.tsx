@@ -93,7 +93,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onOpenVeri
 
       {/* Top Bar with Official Institutional Logo */}
       <div className="w-full max-w-6xl mx-auto px-4 py-4 sm:py-6 flex items-center justify-between z-10">
-        <UmayorLogo size="lg" variant="badge" showSubtext={true} />
+        <UmayorLogo size="lg" variant="badge" />
 
         <div className="flex items-center gap-2 text-xs text-slate-100">
           {onOpenVerifier && (

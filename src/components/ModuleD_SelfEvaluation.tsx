@@ -18,7 +18,8 @@ import {
   Filter,
   Check,
   FileDown,
-  Sparkles
+  Sparkles,
+  GraduationCap
 } from 'lucide-react';
 import { ExportActaPdfModal } from './ExportActaPdfModal';
 
@@ -37,14 +38,28 @@ export const ModuleD_SelfEvaluation: React.FC = () => {
     loadCnaAbetTemplate,
     qualityMappings, 
     createQualityMapping, 
-    deleteQualityMapping 
+    deleteQualityMapping,
+    programs,
+    activeProgramId,
+    setActiveProgramId
   } = useApp();
 
   // Active view: 'inbox' (Actas cerradas y etiquetador) | 'nomenclatures' (Estructura jerárquica) | 'matrix' (Matriz de Búsqueda y Acreditación)
   const [activeSubTab, setActiveSubTab] = useState<'inbox' | 'nomenclatures' | 'matrix'>('inbox');
+  const [moduleDProgramFilter, setModuleDProgramFilter] = useState<string>('all');
 
-  // Closed meetings only
-  const closedMeetings = meetings.filter((m) => m.status === 'cerrada');
+  // Closed meetings filtered by program
+  const closedMeetings = meetings.filter((m) => {
+    if (m.status !== 'cerrada') return false;
+    if (moduleDProgramFilter !== 'all') {
+      return m.programId === moduleDProgramFilter;
+    }
+    if (activeProgramId !== 'all') {
+      return m.programId === activeProgramId;
+    }
+    return true;
+  });
+
   const [selectedMeetingId, setSelectedMeetingId] = useState<string>(closedMeetings[0]?.id || '');
   const selectedMeeting = meetings.find((m) => m.id === selectedMeetingId) || closedMeetings[0];
 
@@ -100,6 +115,8 @@ export const ModuleD_SelfEvaluation: React.FC = () => {
 
   // Filtered matrix for audit search
   const filteredMatrix = qualityMappings.filter((map) => {
+    if (moduleDProgramFilter !== 'all' && map.programId !== moduleDProgramFilter) return false;
+    if (activeProgramId !== 'all' && map.programId !== activeProgramId) return false;
     if (matrixFactorFilter !== 'all' && map.factorCode !== matrixFactorFilter) return false;
     if (matrixSearchQuery.trim()) {
       const q = matrixSearchQuery.toLowerCase();
@@ -107,7 +124,8 @@ export const ModuleD_SelfEvaluation: React.FC = () => {
       const matchJust = map.evidentialContribution.toLowerCase().includes(q);
       const matchActa = map.meetingCode.toLowerCase().includes(q);
       const matchAspect = map.aspectName.toLowerCase().includes(q);
-      if (!matchText && !matchJust && !matchActa && !matchAspect) return false;
+      const matchProg = (map.programName || '').toLowerCase().includes(q);
+      if (!matchText && !matchJust && !matchActa && !matchAspect && !matchProg) return false;
     }
     return true;
   });
@@ -148,6 +166,8 @@ export const ModuleD_SelfEvaluation: React.FC = () => {
       aspectName: aspect.name,
       excerpt: mappingExcerpt,
       evidentialContribution: mappingRationale,
+      programId: selectedMeeting.programId,
+      programName: selectedMeeting.programName,
     });
 
     setShowMappingModal(false);
@@ -629,30 +649,52 @@ export const ModuleD_SelfEvaluation: React.FC = () => {
       {activeSubTab === 'matrix' && (
         <div className="space-y-4">
           {/* Search and Filters */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-            <div className="flex items-center gap-3">
-              <label className="text-xs font-medium text-slate-600">Filtrar por Factor:</label>
-              <select
-                value={matrixFactorFilter}
-                onChange={(e) => setMatrixFactorFilter(e.target.value)}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 font-semibold"
-              >
-                <option value="all">Todos los Factores de Acreditación</option>
-                {qualityFactors.map((f) => (
-                  <option key={f.id} value={f.code}>
-                    {f.code} - {f.name}
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-slate-600">Programa:</label>
+                <select
+                  value={moduleDProgramFilter}
+                  onChange={(e) => setModuleDProgramFilter(e.target.value)}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 font-semibold cursor-pointer"
+                >
+                  <option value="all">
+                    {activeProgramId !== 'all' 
+                      ? `Filtro Global (${programs.find(p => p.id === activeProgramId)?.code || 'Programa'})` 
+                      : 'Todos los Programas de la Facultad'}
                   </option>
-                ))}
-              </select>
+                  {programs.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.code} - {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-slate-600">Factor:</label>
+                <select
+                  value={matrixFactorFilter}
+                  onChange={(e) => setMatrixFactorFilter(e.target.value)}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 font-semibold cursor-pointer"
+                >
+                  <option value="all">Todos los Factores de Acreditación</option>
+                  {qualityFactors.map((f) => (
+                    <option key={f.id} value={f.code}>
+                      {f.code} - {f.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            <div className="relative min-w-[260px]">
+            <div className="relative min-w-[240px]">
               <Search className="h-3.5 w-3.5 absolute left-3 top-2.5 text-slate-400" />
               <input
                 type="text"
                 value={matrixSearchQuery}
                 onChange={(e) => setMatrixSearchQuery(e.target.value)}
-                placeholder="Buscar por aspecto, acta o justificación..."
+                placeholder="Buscar por aspecto, acta, justificación..."
                 className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900"
               />
             </div>
@@ -672,7 +714,7 @@ export const ModuleD_SelfEvaluation: React.FC = () => {
 
               <button
                 onClick={() => window.print()}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 cursor-pointer"
               >
                 <Printer className="h-3.5 w-3.5" />
                 Imprimir Ficha
@@ -694,14 +736,20 @@ export const ModuleD_SelfEvaluation: React.FC = () => {
                   {filteredMatrix.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="py-8 text-center text-xs text-slate-400">
-                        No se encontraron registros de auditoría que coincidan con la búsqueda.
+                        No se encontraron registros de auditoría que coincidan con la búsqueda o filtro de programa.
                       </td>
                     </tr>
                   ) : (
                     filteredMatrix.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
                         <td className="py-3 px-4 font-mono font-bold text-slate-900 whitespace-nowrap">
-                          {item.meetingCode}
+                          <div className="flex items-center gap-1.5">
+                            <span>{item.meetingCode}</span>
+                            <span className="inline-flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              <GraduationCap className="h-2.5 w-2.5 text-[#006837]" />
+                              {item.programName ? (programs.find(p => p.id === item.programId)?.code || item.programName) : 'ING-MEC'}
+                            </span>
+                          </div>
                           <span className="block text-[10px] font-sans font-normal text-slate-500 line-clamp-1 max-w-[150px]">
                             {item.agendaItemTitle}
                           </span>

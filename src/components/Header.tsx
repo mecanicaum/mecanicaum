@@ -19,7 +19,9 @@ import {
   Building2,
   Lock,
   LogOut,
-  QrCode
+  QrCode,
+  GraduationCap,
+  Check
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -41,13 +43,18 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
     googleUser,
     signInWithInstitutionalEmail,
     signOutGoogle,
-    logout
+    logout,
+    programs,
+    activeProgramId,
+    activeProgram,
+    setActiveProgramId
   } = useApp();
 
   const [showRoleSelector, setShowRoleSelector] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showDbMenu, setShowDbMenu] = useState(false);
   const [showSsoModal, setShowSsoModal] = useState(false);
+  const [showProgramSelector, setShowProgramSelector] = useState(false);
   const [customEmail, setCustomEmail] = useState('');
   const [customName, setCustomName] = useState('');
   const [customRole, setCustomRole] = useState<UserRole>('miembro');
@@ -131,15 +138,114 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
 
   return (
     <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-[#E59800]/40 bg-[#006837] text-white px-4 sm:px-6 shadow-[0_4px_12px_rgba(0,104,55,0.15)]">
-      {/* Zone 1: Institutional Logo & Faculty Identity */}
+      {/* Zone 1: Institutional Logo, Global Program Selector & Accreditation */}
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-3">
-          <UmayorLogo size="md" variant="badge" showSubtext={true} />
-          <div className="hidden lg:block border-l border-white/20 pl-3">
-            <span className="text-[10px] bg-[#E59800] text-[#006837] px-2 py-0.5 rounded-md font-heading font-extrabold uppercase tracking-wider block w-fit shadow-xs">
-              Acreditación CNA / ABET
-            </span>
-          </div>
+        <UmayorLogo size="md" variant="badge" />
+
+        {/* Global Academic Program Selector (Multiprograma) */}
+        <div className="relative">
+          <button
+            onClick={() => setShowProgramSelector(!showProgramSelector)}
+            className="flex items-center gap-2 bg-[#004D25] hover:bg-[#003B1A] border border-[#E59800]/50 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-heading transition-all shadow-xs cursor-pointer text-left"
+            title="Seleccionar Programa Académico de la Facultad"
+          >
+            <GraduationCap className="h-4 w-4 text-[#E59800] shrink-0" />
+            <div className="flex flex-col">
+              <span className="text-[9px] text-[#E59800] font-black uppercase tracking-wider leading-none">
+                Programa Curricular
+              </span>
+              <span className="text-[11px] font-bold text-white leading-tight truncate max-w-[120px] sm:max-w-[190px]">
+                {activeProgramId === 'all'
+                  ? 'Todos los Programas'
+                  : activeProgram?.name || 'Ingeniería Mecánica'}
+              </span>
+            </div>
+            <ChevronDown className="h-3 w-3 text-slate-300 ml-0.5" />
+          </button>
+
+          {showProgramSelector && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowProgramSelector(false)} />
+              <div className="absolute left-0 mt-2 w-80 rounded-xl bg-white text-slate-800 shadow-2xl border border-slate-200 p-2 z-50 animate-in fade-in">
+                <div className="p-2 border-b border-slate-100 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-heading font-black text-[#006837] uppercase">
+                    <GraduationCap className="h-4 w-4 text-[#E58A13]" />
+                    <span>Facultad de Ingeniería</span>
+                  </div>
+                  <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-md uppercase">
+                    Multiprograma
+                  </span>
+                </div>
+
+                <div className="py-1 max-h-72 overflow-y-auto space-y-1">
+                  {/* Option: Todos los programas */}
+                  <button
+                    onClick={() => {
+                      setActiveProgramId('all');
+                      setShowProgramSelector(false);
+                    }}
+                    className={`w-full flex items-center justify-between p-2 rounded-lg text-left text-xs transition-colors cursor-pointer ${
+                      activeProgramId === 'all'
+                        ? 'bg-[#006837]/10 text-[#006837] font-black border border-[#006837]/30'
+                        : 'hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <div>
+                      <span className="block font-bold">Todos los Programas</span>
+                      <span className="text-[10px] text-slate-500 font-normal">Vista consolidada de toda la Facultad</span>
+                    </div>
+                    {activeProgramId === 'all' && <Check className="h-4 w-4 text-[#006837]" />}
+                  </button>
+
+                  {/* List of programs */}
+                  {programs.map((prog) => {
+                    const isUserMember = currentUser.programIds?.includes(prog.id);
+                    const isSelected = activeProgramId === prog.id;
+                    return (
+                      <button
+                        key={prog.id}
+                        onClick={() => {
+                          setActiveProgramId(prog.id);
+                          setShowProgramSelector(false);
+                        }}
+                        className={`w-full flex items-center justify-between p-2 rounded-lg text-left text-xs transition-colors cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#006837] text-white font-black shadow-xs'
+                            : 'hover:bg-slate-50 text-slate-800'
+                        }`}
+                      >
+                        <div className="min-w-0 pr-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold uppercase ${
+                              isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
+                            }`}>
+                              {prog.code}
+                            </span>
+                            <span className="font-bold truncate">{prog.name}</span>
+                          </div>
+                          <div className={`text-[10px] mt-0.5 flex items-center gap-2 ${isSelected ? 'text-white/80' : 'text-slate-500'}`}>
+                            {prog.sniesCode && <span>SNIES: {prog.sniesCode}</span>}
+                            {isUserMember && (
+                              <span className={`font-semibold ${isSelected ? 'text-amber-300' : 'text-emerald-700'}`}>
+                                • Eres miembro
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {isSelected && <Check className="h-4 w-4 text-[#E58A13] shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="hidden xl:block border-l border-white/20 pl-3">
+          <span className="text-[10px] bg-[#E59800] text-[#006837] px-2 py-0.5 rounded-md font-heading font-extrabold uppercase tracking-wider block w-fit shadow-xs">
+            Acreditación CNA / ABET
+          </span>
         </div>
       </div>
 

@@ -1,4 +1,62 @@
 {
+  "programs": [
+    {
+      "id": "prog-mec",
+      "code": "ING-MEC",
+      "name": "Ingeniería Mecánica",
+      "level": "pregrado",
+      "faculty": "Facultad de Ingeniería",
+      "sniesCode": "108420",
+      "directorName": "Dirección de Programa de Ingeniería Mecánica",
+      "directorEmail": "autoevaluacionycurriculomecanica@umayor.edu.co",
+      "active": true,
+      "color": "emerald",
+      "description": "Programa oficial acreditado en alta calidad. Formación en diseño mecánico, termofluidos, manufactura y automatización industrial.",
+      "createdAt": "2026-01-15T08:00:00.000Z"
+    },
+    {
+      "id": "prog-sis",
+      "code": "ING-SIS",
+      "name": "Ingeniería de Sistemas",
+      "level": "pregrado",
+      "faculty": "Facultad de Ingeniería",
+      "sniesCode": "109210",
+      "directorName": "Dirección de Programa de Ingeniería de Sistemas",
+      "directorEmail": "sistemas@umayor.edu.co",
+      "active": true,
+      "color": "blue",
+      "description": "Formación en ingeniería de software, arquitectura en la nube, ciberseguridad e inteligencia artificial aplicada.",
+      "createdAt": "2026-01-15T08:00:00.000Z"
+    },
+    {
+      "id": "prog-civ",
+      "code": "ING-CIV",
+      "name": "Ingeniería Civil",
+      "level": "pregrado",
+      "faculty": "Facultad de Ingeniería",
+      "sniesCode": "110530",
+      "directorName": "Dirección de Programa de Ingeniería Civil",
+      "directorEmail": "civil@umayor.edu.co",
+      "active": true,
+      "color": "amber",
+      "description": "Especializado en infraestructura sostenible, geotecnia, estructuras sismorresistentes e hidráulica costera.",
+      "createdAt": "2026-01-15T08:00:00.000Z"
+    },
+    {
+      "id": "prog-tec-elec",
+      "code": "TEC-ELEC",
+      "name": "Tecnología en Mantenimiento Electromecánico",
+      "level": "tecnologia",
+      "faculty": "Facultad de Ingeniería",
+      "sniesCode": "102140",
+      "directorName": "Coordinación Tecnológica",
+      "directorEmail": "electromecanica@umayor.edu.co",
+      "active": true,
+      "color": "purple",
+      "description": "Programa tecnológico enfocado en mantenimiento predictivo industrial, redes de potencia y plantas de producción.",
+      "createdAt": "2026-01-15T08:00:00.000Z"
+    }
+  ],
   "users": [
     {
       "id": "usr-admin-principal",
@@ -10,7 +68,9 @@
       "avatarInitials": "SA",
       "hasVote": true,
       "periodo": "2026 - 2028",
-      "active": true
+      "active": true,
+      "programIds": ["prog-mec", "prog-sis", "prog-civ", "prog-tec-elec"],
+      "primaryProgramId": "prog-mec"
     }
   ],
   "estamentos": [
@@ -159,6 +219,28 @@
   ],
   "digitalSeals": [],
   "auditLogs": [
+    {
+      "userId": "usr-admin-principal",
+      "userName": "Super Administrador del Comité Curricular",
+      "userRole": "super_admin",
+      "action": "GOOGLE_SSO_LOGIN_SUCCESS",
+      "resource": "/api/auth/google-sso",
+      "details": "Inicio de sesión exitoso vía Google Workspace SSO para 'Super Administrador del Comité Curricular' (autoevaluacionycurriculomecanica@umayor.edu.co)",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1791206543859-xe4dhv",
+      "timestamp": "2026-10-05T13:22:23.859Z"
+    },
+    {
+      "userId": "usr-admin-principal",
+      "userName": "Super Administrador del Comité Curricular",
+      "userRole": "super_admin",
+      "action": "LOGIN_SUCCESS",
+      "resource": "/api/auth/login",
+      "details": "Autenticación exitosa con credenciales para 'Super Administrador del Comité Curricular' (autoevaluacionycurriculomecanica@umayor.edu.co)",
+      "ipAddress": "127.0.0.1",
+      "id": "log-1791206543684-776623",
+      "timestamp": "2026-10-05T13:22:23.684Z"
+    },
     {
       "userId": "usr-1790956934972-itvl",
       "userName": "Docente Juan Perez",

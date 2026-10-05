@@ -20,6 +20,7 @@ import {
   DigitalActSeal,
   UserSettings,
   BrandingConfig,
+  AcademicProgram,
 } from '../types';
 
 export const DEFAULT_BRANDING_CONFIG: BrandingConfig = {
@@ -41,6 +42,7 @@ export const DEFAULT_BRANDING_CONFIG: BrandingConfig = {
   updatedBy: 'Sistema Oficial UMAYOR',
 };
 import {
+  INITIAL_PROGRAMS,
   INITIAL_USERS,
   INITIAL_ESTAMENTOS,
   INITIAL_CUSTOM_ROLES,
@@ -96,6 +98,15 @@ interface AppContextType {
   loginWithInstitutionalCredentials: (email: string, password?: string) => Promise<User>;
   signOutGoogle: () => Promise<void>;
   logout: () => void;
+
+  // Academic Programs of the Faculty (Multiprograma)
+  programs: AcademicProgram[];
+  activeProgramId: string; // 'all' or specific program ID (e.g. 'prog-mec')
+  activeProgram: AcademicProgram | null;
+  setActiveProgramId: (programId: string) => void;
+  createProgram: (newProgramData: Omit<AcademicProgram, 'id' | 'createdAt'>) => Promise<AcademicProgram>;
+  updateProgram: (id: string, updates: Partial<AcademicProgram>) => Promise<void>;
+  deleteProgram: (id: string) => Promise<void>;
 
   // Committee Members Administration
   createUser: (userData: Omit<User, 'id' | 'avatarInitials'>) => Promise<User>;
@@ -194,6 +205,10 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Synchronized LocalStorage State via useLocalStorage Hook
+  const [programs, setPrograms] = useLocalStorage<AcademicProgram[]>('sigc_programs', INITIAL_PROGRAMS);
+  const [activeProgramId, setActiveProgramId] = useLocalStorage<string>('sigc_active_program_id', 'prog-mec');
+  const activeProgram = programs.find((p) => p.id === activeProgramId) || null;
+
   const [users, setUsers] = useLocalStorage<User[]>('users', INITIAL_USERS);
   const [currentUser, setCurrentUser] = useLocalStorage<User>('current_user', INITIAL_USERS[0]);
   const [estamentos, setEstamentos] = useLocalStorage<Estamento[]>('estamentos', INITIAL_ESTAMENTOS);
@@ -347,6 +362,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setQualityMappings((prev) => prev.filter((m) => m.id !== id));
     });
 
+    const unsubProgramCreated = realtime.on('program:created', (prog: AcademicProgram) => {
+      setPrograms((prev) => [...prev.filter((p) => p.id !== prog.id), prog]);
+    });
+
+    const unsubProgramUpdated = realtime.on('program:updated', (prog: AcademicProgram) => {
+      setPrograms((prev) => prev.map((p) => (p.id === prog.id ? prog : p)));
+    });
+
+    const unsubProgramDeleted = realtime.on('program:deleted', ({ id }: { id: string }) => {
+      setPrograms((prev) => prev.filter((p) => p.id !== id));
+    });
+
+    // Hydrate programs from backend API if available
+    api.getPrograms().then((fetched) => {
+      if (fetched && fetched.length > 0) {
+        setPrograms(fetched);
+      }
+    }).catch(() => {});
+
     return () => {
       unsubConnection();
       unsubUserCreated();
@@ -368,8 +402,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubQualityFactorsReset();
       unsubQualityMappingCreated();
       unsubQualityMappingDeleted();
+      unsubProgramCreated();
+      unsubProgramUpdated();
+      unsubProgramDeleted();
     };
   }, [
+    setPrograms,
     setUsers,
     setCurrentUser,
     setMeetings,
@@ -735,6 +773,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCustomRoles((prev) => prev.filter((r) => r.id !== id));
   };
 
+  // Academic Programs of the Faculty (Multiprograma)
+  const createProgram = async (
+    newProgramData: Omit<AcademicProgram, 'id' | 'createdAt'>
+  ): Promise<AcademicProgram> => {
+    const newProgram: AcademicProgram = {
+      ...newProgramData,
+      id: `prog-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+    setPrograms((prev) => [...prev, newProgram]);
+    try {
+      await api.createProgram(newProgram);
+    } catch {}
+    return newProgram;
+  };
+
+  const updateProgram = async (id: string, updates: Partial<AcademicProgram>) => {
+    setPrograms((prev) => prev.map((p) => (p.id === id ? { ...p, ...updates } : p)));
+    try {
+      await api.updateProgram(id, updates);
+    } catch {}
+  };
+
+  const deleteProgram = async (id: string) => {
+    setPrograms((prev) => prev.filter((p) => p.id !== id));
+    if (activeProgramId === id) {
+      const remaining = programs.filter((p) => p.id !== id);
+      setActiveProgramId(remaining[0]?.id || 'all');
+    }
+    try {
+      await api.deleteProgram(id);
+    } catch {}
+  };
+
   // Meetings Management
   const createMeeting = async (
     newMeetingData: Omit<Meeting, 'id' | 'quorumPresentCount' | 'quorumTotalRequired'>
@@ -742,8 +814,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const totalRequired = newMeetingData.attendees?.length || 5;
     const presentCount = newMeetingData.attendees?.filter((a) => a.present).length || 0;
 
+    const programToAssign = newMeetingData.programId || (activeProgramId !== 'all' ? activeProgramId : (programs[0]?.id || 'prog-mec'));
+    const programObj = programs.find((p) => p.id === programToAssign);
+
     const newMeeting: Meeting = {
       ...newMeetingData,
+      programId: programToAssign,
+      programName: newMeetingData.programName || programObj?.name || 'Ingeniería Mecánica',
+      programCode: newMeetingData.programCode || programObj?.code || 'ING-MEC',
       id: `meet-${Date.now()}`,
       quorumPresentCount: presentCount,
       quorumTotalRequired: totalRequired,
@@ -753,7 +831,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActiveMeetingId(newMeeting.id);
 
     try {
-      await api.createMeeting(newMeetingData);
+      await api.createMeeting(newMeeting);
     } catch {}
 
     return newMeeting;
@@ -1010,8 +1088,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const createCommitment = async (
     data: Omit<Commitment, 'id' | 'assignedAt' | 'status' | 'evidences' | 'assignedBy'>
   ): Promise<Commitment> => {
+    const parentMeeting = meetings.find((m) => m.id === data.meetingId);
+    const progId = data.programId || parentMeeting?.programId || (activeProgramId !== 'all' ? activeProgramId : (programs[0]?.id || 'prog-mec'));
+    const progObj = programs.find((p) => p.id === progId);
+
     const newCommitment: Commitment = {
       ...data,
+      programId: progId,
+      programName: data.programName || progObj?.name || 'Ingeniería Mecánica',
       id: `comm-${Date.now()}`,
       assignedAt: new Date().toISOString().slice(0, 10),
       assignedBy: currentUser.name,
@@ -1023,7 +1107,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCommitments((prev) => [newCommitment, ...prev]);
 
     try {
-      await api.createCommitment(data);
+      await api.createCommitment(newCommitment);
     } catch {}
 
     return newCommitment;
@@ -1263,8 +1347,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Quality Mappings
   const createQualityMapping = async (data: Omit<ActQualityMapping, 'id' | 'mappedAt' | 'mappedBy'>) => {
+    const parentMeeting = meetings.find((m) => m.id === data.meetingId);
+    const progId = data.programId || parentMeeting?.programId || (activeProgramId !== 'all' ? activeProgramId : (programs[0]?.id || 'prog-mec'));
+    const progObj = programs.find((p) => p.id === progId);
+
     const newMap: ActQualityMapping = {
       ...data,
+      programId: progId,
+      programName: data.programName || progObj?.name || 'Ingeniería Mecánica',
       id: `map-${Date.now()}`,
       mappedBy: currentUser.name,
       mappedAt: new Date().toISOString().slice(0, 10),
@@ -1273,7 +1363,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setQualityMappings((prev) => [newMap, ...prev]);
 
     try {
-      await api.createQualityMapping(data);
+      await api.createQualityMapping(newMap);
     } catch {}
   };
 
@@ -1357,6 +1447,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const backup: FullBackupData = {
       version: '2.4.0-localstorage',
       exportedAt: new Date().toISOString(),
+      programs,
       users,
       estamentos,
       customRoles,
@@ -1387,6 +1478,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const importDatabaseBackup = async (backupJson: string) => {
     try {
       const parsed: FullBackupData = JSON.parse(backupJson);
+      if (parsed.programs) setPrograms(parsed.programs);
       if (parsed.users) setUsers(parsed.users);
       if (parsed.estamentos) setEstamentos(parsed.estamentos);
       if (parsed.customRoles) setCustomRoles(parsed.customRoles);
@@ -1412,12 +1504,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const resetDatabaseToDefaults = async () => {
+    setPrograms(INITIAL_PROGRAMS);
+    setActiveProgramId('prog-mec');
     setUsers(INITIAL_USERS);
     setCurrentUser(INITIAL_USERS[0]);
     setEstamentos(INITIAL_ESTAMENTOS);
     setCustomRoles(INITIAL_CUSTOM_ROLES);
     setMeetings(INITIAL_MEETINGS);
-    setActiveMeetingId(INITIAL_MEETINGS[0].id);
+    setActiveMeetingId(INITIAL_MEETINGS[0]?.id || '');
     setMotions(INITIAL_MOTIONS);
     setCommitments(INITIAL_COMMITMENTS);
     setQualityFactors(CNA_ABET_TEMPLATE_FACTORS);
@@ -1448,6 +1542,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         loginWithInstitutionalCredentials,
         signOutGoogle,
         logout,
+        programs,
+        activeProgramId,
+        activeProgram,
+        setActiveProgramId,
+        createProgram,
+        updateProgram,
+        deleteProgram,
         createUser,
         updateUser,
         deleteUser,

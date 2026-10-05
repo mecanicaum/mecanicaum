@@ -17,7 +17,8 @@ import {
   ExternalLink,
   ChevronRight,
   ShieldAlert,
-  FileDown
+  FileDown,
+  GraduationCap
 } from 'lucide-react';
 import { ExportActaPdfModal } from './ExportActaPdfModal';
 
@@ -36,7 +37,10 @@ export const ModuleA_Meetings: React.FC<ModuleAProps> = ({ onGoToLiveMeeting }) 
     motions,
     commitments,
     qualityMappings,
-    users 
+    users,
+    programs,
+    activeProgramId,
+    setActiveProgramId
   } = useApp();
 
   const [selectedMeetingId, setSelectedMeetingId] = useState<string>(meetings[0]?.id || '');
@@ -45,7 +49,13 @@ export const ModuleA_Meetings: React.FC<ModuleAProps> = ({ onGoToLiveMeeting }) 
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [citationSentSuccess, setCitationSentSuccess] = useState(false);
 
+  // Multiprogram local filter in Module A ('all' or specific program ID)
+  const [moduleAProgramFilter, setModuleAProgramFilter] = useState<string>('all');
+
   // New Meeting Form State
+  const [newMeetingProgramId, setNewMeetingProgramId] = useState<string>(
+    activeProgramId !== 'all' ? activeProgramId : (programs[0]?.id || 'prog-mec')
+  );
   const [newMeetingCode, setNewMeetingCode] = useState(`ACTA-CC-2026-00${meetings.length + 3}`);
   const [newMeetingType, setNewMeetingType] = useState<MeetingType>('ordinaria');
   const [newMeetingTitle, setNewMeetingTitle] = useState('');
@@ -62,14 +72,36 @@ export const ModuleA_Meetings: React.FC<ModuleAProps> = ({ onGoToLiveMeeting }) 
   const [newItemPresenter, setNewItemPresenter] = useState(currentUser.name);
   const [newItemMinutes, setNewItemMinutes] = useState(25);
 
-  const selectedMeeting = meetings.find((m) => m.id === selectedMeetingId) || meetings[0];
+  // Filter meetings based on global activeProgramId and local filter
+  const displayedMeetings = meetings.filter((m) => {
+    if (moduleAProgramFilter !== 'all') {
+      return m.programId === moduleAProgramFilter;
+    }
+    if (activeProgramId !== 'all') {
+      return m.programId === activeProgramId;
+    }
+    return true;
+  });
+
+  const selectedMeeting = meetings.find((m) => m.id === selectedMeetingId) || displayedMeetings[0] || meetings[0];
   const isPresident = currentUser.role === 'super_admin' || currentUser.role === 'presidente';
 
   const handleCreateMeeting = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMeetingTitle.trim()) return;
 
-    const attendees = users.map((u) => ({
+    const progObj = programs.find((p) => p.id === newMeetingProgramId) || programs[0];
+
+    // Convocamos a los miembros adscritos al comité curricular de este programa
+    const programUsers = users.filter((u) => 
+      (u.programIds && u.programIds.includes(progObj?.id)) || 
+      u.role === 'super_admin' || 
+      u.primaryProgramId === progObj?.id
+    );
+
+    const targetAttendeesList = programUsers.length > 0 ? programUsers : users;
+
+    const attendees = targetAttendeesList.map((u) => ({
       userId: u.id,
       userName: u.name,
       role: u.roleLabel,
@@ -80,7 +112,7 @@ export const ModuleA_Meetings: React.FC<ModuleAProps> = ({ onGoToLiveMeeting }) 
       {
         order: 1,
         title: 'Verificación del Quórum e Instalación de la Sesión',
-        description: 'Constatación reglamentaria de los miembros acreditados.',
+        description: `Constatación reglamentaria de los miembros acreditados del Comité Curricular de ${progObj?.name || 'la Facultad'}.`,
         presenter: currentUser.name,
         estimatedMinutes: 10,
       },
@@ -103,6 +135,9 @@ export const ModuleA_Meetings: React.FC<ModuleAProps> = ({ onGoToLiveMeeting }) 
       modality: newMeetingModality,
       locationOrUrl: newMeetingLocation,
       status: 'programada',
+      programId: progObj?.id || 'prog-mec',
+      programName: progObj?.name || 'Ingeniería Mecánica',
+      programCode: progObj?.code || 'ING-MEC',
       attendees,
       agendaItems: defaultItems.map((it, idx) => ({
         id: `item-${Date.now()}-${idx}`,
@@ -183,22 +218,51 @@ export const ModuleA_Meetings: React.FC<ModuleAProps> = ({ onGoToLiveMeeting }) 
         <div className="lg:col-span-5 space-y-3">
           <div className="flex items-center justify-between px-1">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Convocatorias Registradas ({meetings.length})
+              Convocatorias Registradas ({displayedMeetings.length})
             </h2>
             <span className="text-[11px] text-slate-400">Año Académico 2026</span>
           </div>
 
+          {/* Multiprogram Filter Dropdown */}
+          <div className="flex flex-col gap-1.5 bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+                <GraduationCap className="h-3.5 w-3.5 text-[#006837]" />
+                Filtrar por Programa:
+              </span>
+              <span className="text-[10px] font-mono text-slate-400">
+                {displayedMeetings.length} de {meetings.length}
+              </span>
+            </div>
+            <select
+              value={moduleAProgramFilter}
+              onChange={(e) => setModuleAProgramFilter(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#006837]"
+            >
+              <option value="all">
+                {activeProgramId !== 'all' 
+                  ? `Filtro Activo Global (${programs.find(p => p.id === activeProgramId)?.code || 'Programa'})` 
+                  : 'Todos los Programas de la Facultad'}
+              </option>
+              {programs.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.code} · {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="space-y-2">
-            {meetings.length === 0 ? (
+            {displayedMeetings.length === 0 ? (
               <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-xs text-slate-400 space-y-2">
                 <Calendar className="h-6 w-6 text-slate-400 mx-auto" />
-                <p className="font-medium text-slate-600">No hay convocatorias registradas</p>
+                <p className="font-medium text-slate-600">No hay convocatorias para este programa</p>
                 <p className="text-[11px] text-slate-400">
-                  Comience programando la primera sesión oficial del Comité Curricular.
+                  Seleccione "Todos los Programas" o cree una nueva convocatoria para este programa.
                 </p>
               </div>
             ) : (
-              meetings.map((meeting) => {
+              displayedMeetings.map((meeting) => {
                 const isSelected = meeting.id === selectedMeeting?.id;
                 const statusBadges = {
                   programada: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -217,9 +281,14 @@ export const ModuleA_Meetings: React.FC<ModuleAProps> = ({ onGoToLiveMeeting }) 
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-xs font-bold text-slate-800">
-                        {meeting.code}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-xs font-bold text-slate-800">
+                          {meeting.code}
+                        </span>
+                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
+                          {meeting.programCode || 'ING-MEC'}
+                        </span>
+                      </div>
                       <div className="flex items-center gap-1.5">
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border capitalize ${statusBadges[meeting.status]}`}>
                           {meeting.status === 'en_curso' ? 'En Curso' : meeting.status}
@@ -234,7 +303,12 @@ export const ModuleA_Meetings: React.FC<ModuleAProps> = ({ onGoToLiveMeeting }) 
                       {meeting.title}
                     </h3>
 
-                    <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-slate-500 border-t border-slate-100 pt-2">
+                    <div className="mt-1 text-[11px] text-slate-500 flex items-center gap-1">
+                      <GraduationCap className="h-3 w-3 text-slate-400 shrink-0" />
+                      <span className="truncate">{meeting.programName || 'Ingeniería Mecánica'}</span>
+                    </div>
+
+                    <div className="mt-2.5 grid grid-cols-2 gap-2 text-[11px] text-slate-500 border-t border-slate-100 pt-2">
                       <div className="flex items-center gap-1.5 truncate">
                         <Calendar className="h-3 w-3 shrink-0 text-slate-400" />
                         <span>{meeting.date}</span>
@@ -270,9 +344,13 @@ export const ModuleA_Meetings: React.FC<ModuleAProps> = ({ onGoToLiveMeeting }) 
             {/* Header of Selected Meeting */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-slate-100 pb-4">
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="font-mono text-sm font-bold text-slate-900">
                     {selectedMeeting.code}
+                  </span>
+                  <span className="inline-flex items-center gap-1 font-mono text-xs font-bold text-emerald-900 bg-emerald-100 px-2.5 py-0.5 rounded border border-emerald-300">
+                    <GraduationCap className="h-3.5 w-3.5 text-[#006837]" />
+                    {selectedMeeting.programCode || 'ING-MEC'} · {selectedMeeting.programName || 'Ingeniería Mecánica'}
                   </span>
                   <span className="text-xs font-semibold uppercase text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
                     Reunión {selectedMeeting.type}
@@ -284,7 +362,7 @@ export const ModuleA_Meetings: React.FC<ModuleAProps> = ({ onGoToLiveMeeting }) 
                     </span>
                   )}
                 </div>
-                <h2 className="text-base font-bold text-slate-900 mt-1">
+                <h2 className="text-base font-bold text-slate-900 mt-1.5">
                   {selectedMeeting.title}
                 </h2>
                 <div className="mt-2 flex flex-wrap gap-y-1 gap-x-4 text-xs text-slate-600">
@@ -545,6 +623,27 @@ export const ModuleA_Meetings: React.FC<ModuleAProps> = ({ onGoToLiveMeeting }) 
             </div>
 
             <form onSubmit={handleCreateMeeting} className="space-y-3.5">
+              <div className="p-3 bg-emerald-50/60 border border-emerald-200 rounded-xl space-y-1">
+                <label className="block text-[11px] font-bold text-[#006837] uppercase tracking-wide flex items-center gap-1.5">
+                  <GraduationCap className="h-4 w-4" />
+                  Programa Académico de la Facultad (Multiprograma) *
+                </label>
+                <select
+                  value={newMeetingProgramId}
+                  onChange={(e) => setNewMeetingProgramId(e.target.value)}
+                  className="w-full rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-[#006837]"
+                >
+                  {programs.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.code} · {p.name} ({p.level})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-slate-500">
+                  La sesión quedará adscrita a este programa y convocará automáticamente a sus miembros del comité.
+                </p>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-medium text-slate-700 mb-1">
@@ -731,29 +830,30 @@ export const ModuleA_Meetings: React.FC<ModuleAProps> = ({ onGoToLiveMeeting }) 
                   </div>
                   <div className="flex justify-between border-b border-slate-200/70 pb-2">
                     <span className="text-slate-500 font-medium">Para:</span>
-                    <span className="text-slate-800 text-right truncate max-w-xs">
-                      {users.length} integrantes del Comité Curricular
+                    <span className="text-slate-800 text-right truncate max-w-xs font-semibold">
+                      Comité Curricular · {selectedMeeting.programName || 'Facultad de Ingeniería'}
                     </span>
                   </div>
                   <div className="flex justify-between border-b border-slate-200/70 pb-2">
                     <span className="text-slate-500 font-medium">Asunto:</span>
                     <span className="font-semibold text-slate-900">
-                      [Comité Curricular] Citación {selectedMeeting.type.toUpperCase()}: {selectedMeeting.code}
+                      [Comité Curricular {selectedMeeting.programCode || 'ING'}] Citación {selectedMeeting.type.toUpperCase()}: {selectedMeeting.code}
                     </span>
                   </div>
 
                   <div className="pt-2 text-slate-700 space-y-2 text-[11px] leading-relaxed">
-                    <p>Estimados integrantes del Comité Curricular de Ingeniería Mecánica,</p>
+                    <p>Estimados integrantes del Comité Curricular de {selectedMeeting.programName || 'la Facultad de Ingeniería'},</p>
                     <p>
                       Por medio de la presente, la Presidencia del Comité se permite convocarles formalmente a la sesión{' '}
-                      <strong>{selectedMeeting.type}</strong>:
+                      <strong>{selectedMeeting.type}</strong> del programa:
                     </p>
                     <ul className="list-disc pl-5 space-y-1 text-slate-800">
+                      <li><strong>Programa Académico:</strong> {selectedMeeting.programName || 'Ingeniería Mecánica'} ({selectedMeeting.programCode || 'ING-MEC'})</li>
                       <li><strong>Fecha:</strong> {selectedMeeting.date} ({selectedMeeting.startTime} a {selectedMeeting.endTime})</li>
                       <li><strong>Lugar / Enlace:</strong> {selectedMeeting.locationOrUrl}</li>
                       <li><strong>Puntos del Orden del Día:</strong> {selectedMeeting.agendaItems.length} puntos programados.</li>
                     </ul>
-                    <p>Se solicita puntualidad para verificar el quórum reglamentario.</p>
+                    <p>Se solicita puntualidad para verificar el quórum reglamentario del comité.</p>
                   </div>
                 </div>
 

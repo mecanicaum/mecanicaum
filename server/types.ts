@@ -24,6 +24,23 @@ export interface CustomRole {
   color: string;
 }
 
+export type AcademicLevel = 'pregrado' | 'postgrado' | 'tecnologia' | 'maestria' | 'especializacion';
+
+export interface AcademicProgram {
+  id: string;
+  code: string;
+  name: string;
+  level: AcademicLevel;
+  faculty: string;
+  sniesCode?: string;
+  directorName?: string;
+  directorEmail?: string;
+  active: boolean;
+  color?: string;
+  description?: string;
+  createdAt: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -41,6 +58,8 @@ export interface User {
   active?: boolean;
   password?: string;
   passwordSalt?: string;
+  programIds?: string[];
+  primaryProgramId?: string;
 }
 
 export type MeetingType = 'ordinaria' | 'extraordinaria';
@@ -89,6 +108,9 @@ export interface Meeting {
   signedByPresident?: boolean;
   presidentSignatureDate?: string;
   cryptographicSealId?: string;
+  programId?: string;
+  programName?: string;
+  programCode?: string;
 }
 
 export type VoteOption = 'a_favor' | 'en_contra' | 'abstencion';
@@ -156,6 +178,8 @@ export interface Commitment {
   auditedAt?: string;
   lastReminderSentAt?: string;
   reminderCount?: number;
+  programId?: string;
+  programName?: string;
 }
 
 export interface QualityAspect {
@@ -195,6 +219,8 @@ export interface ActQualityMapping {
   evidentialContribution: string;
   mappedBy: string;
   mappedAt: string;
+  programId?: string;
+  programName?: string;
 }
 
 export interface AccessRequest {
@@ -239,6 +265,8 @@ export interface DigitalActSeal {
   totalVoters: number;
   totalAgreements: number;
   totalCommitments: number;
+  programId?: string;
+  programName?: string;
 }
 
 export interface ServerAuditLog {

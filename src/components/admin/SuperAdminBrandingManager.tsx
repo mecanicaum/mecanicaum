@@ -29,8 +29,6 @@ export const SuperAdminBrandingManager: React.FC = () => {
   // Local editable draft state for Logo
   const [logoType, setLogoType] = useState<'default' | 'custom_image'>(brandingConfig.logoType);
   const [customLogoUrl, setCustomLogoUrl] = useState(brandingConfig.customLogoUrl || '');
-  const [institutionName, setInstitutionName] = useState(brandingConfig.institutionName);
-  const [facultyOrLocationName, setFacultyOrLocationName] = useState(brandingConfig.facultyOrLocationName);
 
   // Local editable draft state for Banner
   const [bannerType, setBannerType] = useState<'dynamic' | 'custom_image'>(brandingConfig.bannerType);
@@ -98,13 +96,11 @@ export const SuperAdminBrandingManager: React.FC = () => {
       await updateBrandingConfig({
         logoType,
         customLogoUrl: logoType === 'custom_image' ? customLogoUrl : '',
-        institutionName: institutionName.trim() || 'INSTITUCIÓN UNIVERSITARIA',
-        facultyOrLocationName: facultyOrLocationName.trim() || 'MAYOR DE CARTAGENA',
       });
       setSaveStatus('¡Logotipo actualizado exitosamente en toda la plataforma!');
       setTimeout(() => setSaveStatus(null), 3500);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Error al guardar cambios de marca.');
+      setErrorMessage(err.message || 'Error al guardar cambios de logotipo.');
     }
   };
 
@@ -140,8 +136,6 @@ export const SuperAdminBrandingManager: React.FC = () => {
       await resetBrandingConfig();
       setLogoType('default');
       setCustomLogoUrl('');
-      setInstitutionName('INSTITUCIÓN UNIVERSITARIA');
-      setFacultyOrLocationName('MAYOR DE CARTAGENA');
       setBannerType('dynamic');
       setBannerImageUrl('');
       setBannerSloganPrefix('LA CALIDAD, UN C');
@@ -362,35 +356,6 @@ export const SuperAdminBrandingManager: React.FC = () => {
               </div>
             )}
 
-            {/* Institutional Subtext Customization */}
-            <div className="space-y-3 pt-3 border-t border-slate-100">
-              <label className="block text-xs font-heading font-black text-slate-800 uppercase">
-                Texto de Identidad Acompañante
-              </label>
-
-              <div>
-                <span className="text-[11px] text-slate-600 font-medium">Línea Superior (Institución):</span>
-                <input
-                  type="text"
-                  value={institutionName}
-                  onChange={(e) => setInstitutionName(e.target.value)}
-                  placeholder="INSTITUCIÓN UNIVERSITARIA"
-                  className="w-full mt-1 px-3 py-2 rounded-lg border border-slate-200 text-xs font-heading font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#006837] uppercase"
-                />
-              </div>
-
-              <div>
-                <span className="text-[11px] text-slate-600 font-medium">Línea Inferior (Sede o Facultad):</span>
-                <input
-                  type="text"
-                  value={facultyOrLocationName}
-                  onChange={(e) => setFacultyOrLocationName(e.target.value)}
-                  placeholder="MAYOR DE CARTAGENA"
-                  className="w-full mt-1 px-3 py-2 rounded-lg border border-slate-200 text-xs font-heading font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#006837] uppercase"
-                />
-              </div>
-            </div>
-
             {/* Save Button */}
             <button
               onClick={handleSaveLogo}
@@ -406,10 +371,10 @@ export const SuperAdminBrandingManager: React.FC = () => {
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
               <h4 className="text-xs font-heading font-black text-slate-800 uppercase flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-[#E59800]" />
-                Previsualización en Tiempo Real del Nuevo Logotipo
+                Previsualización en Tiempo Real del Logotipo
               </h4>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Así es exactamente como se visualiza en los diferentes componentes del sistema:
+                Exhibición limpia y proporcionada del logo sin textos añadidos:
               </p>
             </div>
 
@@ -417,51 +382,36 @@ export const SuperAdminBrandingManager: React.FC = () => {
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-slate-500 uppercase">1. En Barra de Cabecera (Navbar Badge)</span>
-                <span className="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-mono">Fondo Verde #006837</span>
+                <span className="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-mono">Fondo Verde Institucional</span>
               </div>
               <div className="bg-[#006837] p-3 rounded-xl flex items-center justify-between">
-                {/* Temporary preview rendering */}
-                <div className="bg-white rounded-lg p-2.5 flex items-center gap-2.5 shadow-sm border border-amber-300/60">
+                <div className="bg-white rounded-xl px-3 py-1.5 flex items-center justify-center shadow-xs border border-white/40">
                   {logoType === 'custom_image' && customLogoUrl ? (
-                    <img src={customLogoUrl} alt="Logo" className="w-11 h-11 object-contain" />
+                    <img src={customLogoUrl} alt="Logo" className="h-8 max-w-[150px] object-contain" />
                   ) : (
-                    <UmayorLogo size="md" forceDefault={true} variant="full" showSubtext={false} />
+                    <UmayorLogo size="md" forceDefault={true} variant="full" />
                   )}
-                  <div className="flex flex-col text-left">
-                    <span className="font-heading font-black text-xs text-[#006837] uppercase leading-tight">
-                      {institutionName || 'INSTITUCIÓN UNIVERSITARIA'}
-                    </span>
-                    <span className="font-heading font-black text-[11px] text-[#2D3748] uppercase leading-tight">
-                      {facultyOrLocationName || 'MAYOR DE CARTAGENA'}
-                    </span>
-                  </div>
                 </div>
 
                 <div className="text-[11px] text-white/80 font-mono hidden sm:block">
-                  Simulación Header
+                  Formato Horizontal
                 </div>
               </div>
             </div>
 
-            {/* Simulation 2: Square Card (Welcome / Actas) */}
+            {/* Simulation 2: Contained Card (Welcome / Actas) */}
             <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-500 uppercase">2. Formato Tarjeta Oficial (Actas y Portal)</span>
+                <span className="text-[11px] font-bold text-slate-500 uppercase">2. Formato Tarjeta Contenida (Portal / Actas)</span>
                 <span className="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-mono">Fondo Blanco</span>
               </div>
-              <div className="p-6 bg-slate-50/70 border border-slate-200 rounded-xl flex flex-col items-center text-center">
-                {logoType === 'custom_image' && customLogoUrl ? (
-                  <img src={customLogoUrl} alt="Logo" className="w-20 h-20 object-contain drop-shadow-xs" />
-                ) : (
-                  <UmayorLogo size="xl" forceDefault={true} variant="full" showSubtext={false} />
-                )}
-                <div className="mt-3 flex flex-col items-center">
-                  <span className="font-heading font-black text-slate-800 text-sm tracking-tight uppercase">
-                    {institutionName || 'INSTITUCIÓN UNIVERSITARIA'}
-                  </span>
-                  <span className="font-heading font-black text-slate-800 text-base tracking-wider uppercase mt-0.5">
-                    {facultyOrLocationName || 'MAYOR DE CARTAGENA'}
-                  </span>
+              <div className="p-6 bg-slate-50/70 border border-slate-200 rounded-xl flex items-center justify-center">
+                <div className="px-5 py-3 bg-white rounded-2xl shadow-xs border border-slate-200 flex items-center justify-center">
+                  {logoType === 'custom_image' && customLogoUrl ? (
+                    <img src={customLogoUrl} alt="Logo" className="h-12 max-w-[220px] object-contain drop-shadow-xs" />
+                  ) : (
+                    <UmayorLogo size="lg" forceDefault={true} variant="full" />
+                  )}
                 </div>
               </div>
             </div>
