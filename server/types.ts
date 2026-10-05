@@ -80,6 +80,7 @@ export interface User {
   primaryProgramId?: string;
   programas_asignados?: string[];
   programa_activo?: string;
+  programRoles?: Record<string, string>;
 }
 
 export type MeetingType = 'ordinaria' | 'extraordinaria';

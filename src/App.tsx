@@ -16,7 +16,7 @@ import { AccessibilityBar } from './components/AccessibilityBar';
 
 const AppContent: React.FC = () => {
   const { currentUser, setActiveMeetingId, isAuthenticated } = useApp();
-  const [currentTab, setCurrentTab] = useState<string>('modulo_a');
+  const [currentTab, setCurrentTab] = useState<string>('modulo_e');
   const [verifyCode, setVerifyCode] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -49,7 +49,7 @@ const AppContent: React.FC = () => {
   if (!isAuthenticated) {
     return (
       <LoginView
-        onLoginSuccess={() => setCurrentTab('modulo_a')}
+        onLoginSuccess={() => setCurrentTab('modulo_e')}
         onOpenVerifier={(code) => setVerifyCode(code || '')}
       />
     );
@@ -81,7 +81,7 @@ const AppContent: React.FC = () => {
       case 'modulo_admin':
         return <Module_Admin />;
       default:
-        return <ModuleA_Meetings onGoToLiveMeeting={handleGoToLiveMeeting} />;
+        return <ModuleE_Dashboard />;
     }
   };
 

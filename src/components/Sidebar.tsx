@@ -33,6 +33,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
 
   const navItems = [
     {
+      id: 'modulo_e',
+      label: 'Inicio · Dashboard e Indicadores',
+      sublabel: 'KPIs, cumplimiento y métricas analíticas',
+      icon: BarChart3,
+      roles: ['super_admin', 'presidente', 'miembro', 'seguimiento', 'autoevaluacion'],
+    },
+    {
       id: 'modulo_a',
       label: 'A. Programación y orden del día',
       sublabel: 'Convocatorias y puntos de agenda',
@@ -63,15 +70,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, setCurrentTab }) =
       roles: ['super_admin', 'presidente', 'autoevaluacion', 'seguimiento'],
     },
     {
-      id: 'modulo_e',
-      label: 'E. Dashboard e indicadores',
-      sublabel: 'KPIs, cumplimiento y alertas',
-      icon: BarChart3,
-      roles: ['super_admin', 'presidente', 'miembro', 'seguimiento', 'autoevaluacion'],
-    },
-    {
       id: 'modulo_admin',
-      label: 'F. Administración del comité',
+      label: 'E. Administración del comité',
       sublabel: 'Programas, miembros, roles y estamentos',
       icon: UserCog,
       roles: ['super_admin', 'presidente', 'autoevaluacion', 'seguimiento', 'miembro'],

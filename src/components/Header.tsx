@@ -47,7 +47,12 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
     programs,
     activeProgramId,
     activeProgram,
-    setActiveProgramId
+    programas_asignados,
+    setActiveProgramId,
+    filteredMeetings,
+    filteredCommitments,
+    meetings,
+    commitments
   } = useApp();
 
   const [showRoleSelector, setShowRoleSelector] = useState(false);
@@ -147,60 +152,85 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
           <button
             onClick={() => setShowProgramSelector(!showProgramSelector)}
             className="flex items-center gap-2 bg-[#004D25] hover:bg-[#003B1A] border border-[#E59800]/50 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-heading transition-all shadow-xs cursor-pointer text-left"
-            title="Seleccionar Programa Académico de la Facultad"
+            title="Seleccionar Programa Académico Activo para filtrar reuniones y compromisos"
           >
-            <GraduationCap className="h-4 w-4 text-[#E59800] shrink-0" />
+            <GraduationCap className="h-4.5 w-4.5 text-[#E59800] shrink-0" />
             <div className="flex flex-col">
-              <span className="text-[9px] text-[#E59800] font-black uppercase tracking-wider leading-none">
-                Programa Curricular
-              </span>
-              <span className="text-[11px] font-bold text-white leading-tight truncate max-w-[120px] sm:max-w-[190px]">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] text-[#E59800] font-black uppercase tracking-wider leading-none">
+                  Programa Activo
+                </span>
+                <span className="text-[9px] bg-emerald-950/80 text-emerald-300 font-mono font-bold px-1.5 rounded border border-emerald-700/60">
+                  {activeProgramId === 'all' ? 'TODOS' : activeProgram?.code || 'ING-MEC'}
+                </span>
+              </div>
+              <span className="text-[11px] font-bold text-white leading-tight truncate max-w-[130px] sm:max-w-[200px]">
                 {activeProgramId === 'all'
                   ? 'Todos los Programas'
                   : activeProgram?.name || 'Ingeniería Mecánica'}
               </span>
             </div>
-            <ChevronDown className="h-3 w-3 text-slate-300 ml-0.5" />
+            <ChevronDown className="h-3.5 w-3.5 text-slate-300 ml-0.5 shrink-0" />
           </button>
 
           {showProgramSelector && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setShowProgramSelector(false)} />
-              <div className="absolute left-0 mt-2 w-80 rounded-xl bg-white text-slate-800 shadow-2xl border border-slate-200 p-2 z-50 animate-in fade-in">
+              <div className="absolute left-0 mt-2 w-84 rounded-2xl bg-white text-slate-800 shadow-2xl border border-slate-200 p-2.5 z-50 animate-in fade-in">
                 <div className="p-2 border-b border-slate-100 flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-xs font-heading font-black text-[#006837] uppercase">
                     <GraduationCap className="h-4 w-4 text-[#E58A13]" />
                     <span>Facultad de Ingeniería</span>
                   </div>
                   <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-md uppercase">
-                    Multiprograma
+                    Filtro Global
                   </span>
                 </div>
 
-                <div className="py-1 max-h-72 overflow-y-auto space-y-1">
-                  {/* Option: Todos los programas */}
+                <p className="px-2 py-1.5 text-[10px] text-slate-500 leading-snug">
+                  Selecciona el programa para filtrar dinámicamente las sesiones, actas y compromisos:
+                </p>
+
+                <div className="py-1 max-h-80 overflow-y-auto space-y-1">
+                  {/* Option: Todos los programas (Facultad Consolidada) */}
                   <button
                     onClick={() => {
                       setActiveProgramId('all');
                       setShowProgramSelector(false);
                     }}
-                    className={`w-full flex items-center justify-between p-2 rounded-lg text-left text-xs transition-colors cursor-pointer ${
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors cursor-pointer ${
                       activeProgramId === 'all'
-                        ? 'bg-[#006837]/10 text-[#006837] font-black border border-[#006837]/30'
-                        : 'hover:bg-slate-50 text-slate-700'
+                        ? 'bg-[#006837] text-white font-bold shadow-xs'
+                        : 'hover:bg-slate-50 text-slate-800'
                     }`}
                   >
                     <div>
-                      <span className="block font-bold">Todos los Programas</span>
-                      <span className="text-[10px] text-slate-500 font-normal">Vista consolidada de toda la Facultad</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold uppercase ${
+                          activeProgramId === 'all' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
+                        }`}>
+                          FACULTAD
+                        </span>
+                        <span className="font-bold">Todos los Programas</span>
+                      </div>
+                      <span className={`text-[10px] block mt-0.5 ${activeProgramId === 'all' ? 'text-white/80' : 'text-slate-500'}`}>
+                        Vista consolidada ({meetings.length} reuniones · {commitments.length} compromisos)
+                      </span>
                     </div>
-                    {activeProgramId === 'all' && <Check className="h-4 w-4 text-[#006837]" />}
+                    {activeProgramId === 'all' && <Check className="h-4 w-4 text-[#E58A13] shrink-0" />}
                   </button>
 
-                  {/* List of programs */}
+                  {/* List of Programs */}
                   {programs.map((prog) => {
-                    const isUserMember = currentUser.programIds?.includes(prog.id);
+                    const assignedList = programas_asignados || [];
+                    const isAssigned = assignedList.some((p) => p.id === prog.id) ||
+                                       currentUser.programIds?.includes(prog.id) ||
+                                       currentUser.role === 'super_admin';
                     const isSelected = activeProgramId === prog.id;
+
+                    const progMeetingsCount = meetings.filter((m) => m.programId === prog.id).length;
+                    const progCommitmentsCount = commitments.filter((c) => c.programId === prog.id).length;
+
                     return (
                       <button
                         key={prog.id}
@@ -208,13 +238,13 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
                           setActiveProgramId(prog.id);
                           setShowProgramSelector(false);
                         }}
-                        className={`w-full flex items-center justify-between p-2 rounded-lg text-left text-xs transition-colors cursor-pointer ${
+                        className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors cursor-pointer ${
                           isSelected
-                            ? 'bg-[#006837] text-white font-black shadow-xs'
-                            : 'hover:bg-slate-50 text-slate-800'
+                            ? 'bg-[#006837] text-white font-bold shadow-xs'
+                            : 'hover:bg-slate-50 text-slate-800 border border-slate-100'
                         }`}
                       >
-                        <div className="min-w-0 pr-2">
+                        <div className="min-w-0 pr-2 space-y-0.5">
                           <div className="flex items-center gap-1.5">
                             <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold uppercase ${
                               isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
@@ -223,11 +253,11 @@ export const Header: React.FC<HeaderProps> = ({ currentTab, setCurrentTab }) => 
                             </span>
                             <span className="font-bold truncate">{prog.name}</span>
                           </div>
-                          <div className={`text-[10px] mt-0.5 flex items-center gap-2 ${isSelected ? 'text-white/80' : 'text-slate-500'}`}>
-                            {prog.sniesCode && <span>SNIES: {prog.sniesCode}</span>}
-                            {isUserMember && (
-                              <span className={`font-semibold ${isSelected ? 'text-amber-300' : 'text-emerald-700'}`}>
-                                • Eres miembro
+                          <div className={`text-[10px] flex items-center gap-2 ${isSelected ? 'text-white/80' : 'text-slate-500'}`}>
+                            <span>{progMeetingsCount} reuniones · {progCommitmentsCount} compromisos</span>
+                            {isAssigned && (
+                              <span className={`font-semibold px-1 rounded text-[9px] ${isSelected ? 'bg-amber-400/30 text-amber-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
+                                Asignado
                               </span>
                             )}
                           </div>

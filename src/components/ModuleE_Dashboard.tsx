@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { VirtualMeetingLink } from './VirtualMeetingLink';
 import { 
   BarChart3, 
   CheckCircle2, 
@@ -14,21 +15,36 @@ import {
   GraduationCap,
   ArrowRight,
   Layers,
-  Sparkles
+  Sparkles,
+  Bell,
+  BellRing,
+  Check,
+  Mail,
+  ExternalLink,
+  Send,
+  ShieldAlert,
+  Info,
+  CheckSquare
 } from 'lucide-react';
 
 export const ModuleE_Dashboard: React.FC = () => {
   const { 
+    currentUser,
     meetings, 
     commitments, 
     qualityMappings, 
     users, 
     programs, 
     activeProgramId, 
-    setActiveProgramId 
+    setActiveProgramId,
+    notifications,
+    markNotificationRead,
+    sendCommitmentDeadlineAlert
   } = useApp();
 
   const [dashboardProgramFilter, setDashboardProgramFilter] = useState<string>(activeProgramId || 'all');
+  const [notifTab, setNotifTab] = useState<'all' | 'meetings' | 'acts' | 'commitments' | 'unread'>('all');
+  const [sentAlertMsg, setSentAlertMsg] = useState<string | null>(null);
 
   // Handle program switch from dashboard
   const handleProgramFilterChange = (progId: string) => {
@@ -153,6 +169,16 @@ export const ModuleE_Dashboard: React.FC = () => {
       mappingsCount: progMappings.length,
       membersCount: progMembersCount,
     };
+  });
+
+  // Derived Notification Lists for Dashboard Panel
+  const upcomingMeetingsList = scopedMeetings.filter((m) => m.status === 'programada' || m.status === 'en_curso');
+  const publishedActsList = scopedMeetings.filter((m) => m.status === 'cerrada').slice(0, 4);
+  const dueAlertsList = scopedCommitments.filter((c) => {
+    if (c.status === 'cumplido') return false;
+    const due = new Date(c.dueDate);
+    const diff = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    return diff <= 7 || c.status === 'vencido';
   });
 
   return (
@@ -303,6 +329,171 @@ export const ModuleE_Dashboard: React.FC = () => {
           <p className="mt-3 text-[11px] text-slate-500">
             Fragmentos de actas indexados para el proceso de autoevaluación.
           </p>
+        </div>
+      </div>
+
+      {/* SECTION: CENTRO DE NOTIFICACIONES Y ALERTAS INSTITUCIONALES (PANEL DE CONTROL) */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-amber-50 text-amber-600 border border-amber-200/80 shadow-2xs">
+              <BellRing className="h-5 w-5 animate-pulse" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                Centro de Notificaciones & Alertas del Panel de Control
+                <span className="text-[10px] bg-rose-600 text-white font-bold px-2 py-0.5 rounded-full font-mono shadow-2xs">
+                  {upcomingMeetingsList.length + dueAlertsList.length + publishedActsList.length} Alertas
+                </span>
+              </h2>
+              <p className="text-[11px] text-slate-500">
+                Avisos automáticos de próximas sesiones de comité, actas firmadas digitalmente y compromisos en riesgo
+              </p>
+            </div>
+          </div>
+
+          {/* Filter Tabs */}
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-medium shrink-0 flex-wrap">
+            <button
+              onClick={() => setNotifTab('all')}
+              className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${notifTab === 'all' ? 'bg-white text-slate-900 font-bold shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+            >
+              Todas
+            </button>
+            <button
+              onClick={() => setNotifTab('meetings')}
+              className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${notifTab === 'meetings' ? 'bg-white text-slate-900 font-bold shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+            >
+              Próximas Sesiones ({upcomingMeetingsList.length})
+            </button>
+            <button
+              onClick={() => setNotifTab('commitments')}
+              className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${notifTab === 'commitments' ? 'bg-white text-slate-900 font-bold shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+            >
+              Compromisos ({dueAlertsList.length})
+            </button>
+            <button
+              onClick={() => setNotifTab('acts')}
+              className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${notifTab === 'acts' ? 'bg-white text-slate-900 font-bold shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+            >
+              Actas Publicadas ({publishedActsList.length})
+            </button>
+          </div>
+        </div>
+
+        {/* Feedback Banner if alert dispatched */}
+        {sentAlertMsg && (
+          <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-800 flex items-center justify-between shadow-2xs">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span>{sentAlertMsg}</span>
+            </div>
+            <button onClick={() => setSentAlertMsg(null)} className="text-emerald-600 hover:text-emerald-900 font-bold text-xs">✕</button>
+          </div>
+        )}
+
+        {/* Notifications Grid / Feed */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          {/* Section 1: Próximas Reuniones */}
+          {(notifTab === 'all' || notifTab === 'meetings') && upcomingMeetingsList.map((m) => (
+            <div key={`meet-notif-${m.id}`} className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50/60 via-white to-blue-50/20 p-4 space-y-2.5 text-xs shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-800 bg-blue-100 px-2.5 py-0.5 rounded-md border border-blue-300">
+                  <Calendar className="h-3 w-3 text-blue-600" />
+                  Próxima Sesión
+                </span>
+                <span className="font-mono text-[10px] text-slate-500 font-bold bg-white px-1.5 py-0.5 rounded border border-slate-200">{m.code}</span>
+              </div>
+
+              <h4 className="font-bold text-slate-900 leading-snug line-clamp-2 text-xs">{m.title}</h4>
+
+              <div className="text-[11px] text-slate-600 space-y-1.5 bg-white/90 p-2.5 rounded-xl border border-slate-200/80">
+                <div className="flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                  <span><strong>{m.date}</strong> ({m.startTime} - {m.endTime})</span>
+                </div>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <VirtualMeetingLink locationText={m.locationOrUrl} showButton={true} />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-1 border-t border-blue-100 text-[10px]">
+                <span className="text-slate-500 font-medium">{m.agendaItems.length} puntos en orden del día</span>
+                <span className="text-blue-700 font-bold uppercase">{m.type}</span>
+              </div>
+            </div>
+          ))}
+
+          {/* Section 2: Compromisos Próximos a Vencer o Vencidos */}
+          {(notifTab === 'all' || notifTab === 'commitments') && dueAlertsList.map((c) => {
+            const daysLeft = Math.ceil((new Date(c.dueDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+            const isOverdue = daysLeft < 0;
+
+            return (
+              <div
+                key={`com-notif-${c.id}`}
+                className={`rounded-2xl border p-4 space-y-2.5 text-xs shadow-2xs ${
+                  isOverdue ? 'border-rose-200 bg-gradient-to-br from-rose-50/70 via-white to-rose-50/20' : 'border-amber-200 bg-gradient-to-br from-amber-50/70 via-white to-amber-50/20'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-md border ${
+                    isOverdue ? 'bg-rose-100 text-rose-800 border-rose-300' : 'bg-amber-100 text-amber-800 border-amber-300'
+                  }`}>
+                    <AlertTriangle className="h-3 w-3" />
+                    {isOverdue ? `Vencido hace ${Math.abs(daysLeft)} días` : daysLeft === 0 ? 'Vence Hoy' : `Vence en ${daysLeft} días`}
+                  </span>
+                  <span className="font-mono text-[10px] text-slate-500 font-bold bg-white px-1.5 py-0.5 rounded border border-slate-200">{c.meetingCode}</span>
+                </div>
+
+                <h4 className="font-bold text-slate-900 leading-snug line-clamp-2 text-xs">{c.title}</h4>
+
+                <div className="text-[11px] text-slate-600 bg-white/90 p-2.5 rounded-xl border border-slate-200/80 space-y-1">
+                  <p>Responsable: <strong className="text-slate-800">{c.responsibleName}</strong></p>
+                  <p>Fecha Límite: <strong className="font-mono text-slate-900">{c.dueDate}</strong></p>
+                </div>
+
+                <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                  <span className="text-[10px] text-slate-500 font-medium capitalize">Prioridad: <strong>{c.priority}</strong></span>
+                  <button
+                    onClick={async () => {
+                      const res = await sendCommitmentDeadlineAlert(c.id);
+                      setSentAlertMsg(res.message);
+                      setTimeout(() => setSentAlertMsg(null), 5000);
+                    }}
+                    className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-md border border-blue-200 transition-colors"
+                  >
+                    <Send className="h-2.5 w-2.5" /> Notificar por Correo
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Section 3: Actas Recientes Publicadas / Cerradas */}
+          {(notifTab === 'all' || notifTab === 'acts') && publishedActsList.map((m) => (
+            <div key={`act-notif-${m.id}`} className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50/60 via-white to-emerald-50/20 p-4 space-y-2.5 text-xs shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-md border border-emerald-300">
+                  <ShieldCheck className="h-3 w-3 text-emerald-600" />
+                  Acta Oficial Publicada
+                </span>
+                <span className="font-mono text-[10px] text-slate-500 font-bold bg-white px-1.5 py-0.5 rounded border border-slate-200">{m.code}</span>
+              </div>
+
+              <h4 className="font-bold text-slate-900 leading-snug line-clamp-2 text-xs">{m.title}</h4>
+
+              <div className="text-[11px] text-slate-600 bg-white/90 p-2.5 rounded-xl border border-slate-200/80 space-y-1">
+                <p>Fecha de Sesión: <strong>{m.date}</strong></p>
+                <p className="text-[10px] text-emerald-700 font-semibold">Sellada e inmutable con hash SHA-256 ✓</p>
+              </div>
+
+              <div className="flex items-center justify-between pt-1 border-t border-emerald-100 text-[10px]">
+                <span className="text-slate-500 font-medium">Publicada para consulta</span>
+                <span className="text-emerald-800 font-bold uppercase">{m.programCode || 'ING-MEC'}</span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

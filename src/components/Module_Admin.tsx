@@ -22,10 +22,13 @@ import {
   CheckSquare,
   Star,
   Layers,
-  ArrowRight
+  ArrowRight,
+  ShieldCheck
 } from 'lucide-react';
 import { SuperAdminBrandingManager } from './admin/SuperAdminBrandingManager';
 import { ProgramaManagement } from './admin/ProgramaManagement';
+import { ProgramPermissionsMatrix } from './admin/ProgramPermissionsMatrix';
+import { mapProgramRoleToGlobalUserRole } from '../utils/roleUtils';
 
 export const Module_Admin: React.FC = () => {
   const { 
@@ -54,6 +57,7 @@ export const Module_Admin: React.FC = () => {
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'members' | 'programs' | 'roles' | 'estamentos' | 'brand_customization'>('members');
+  const [memberSubView, setMemberSubView] = useState<'cards' | 'matrix'>('cards');
 
   // Search & Filter for Members
   const [memberSearch, setMemberSearch] = useState('');
@@ -79,6 +83,7 @@ export const Module_Admin: React.FC = () => {
   // Multiprogram member association state
   const [memberProgramIds, setMemberProgramIds] = useState<string[]>([]);
   const [memberPrimaryProgramId, setMemberPrimaryProgramId] = useState<string>('');
+  const [memberProgramRoles, setMemberProgramRoles] = useState<Record<string, string>>({});
 
   // Program Modal State
   const [showProgramModal, setShowProgramModal] = useState(false);
@@ -155,6 +160,7 @@ export const Module_Admin: React.FC = () => {
     const defaultProg = activeProgramId !== 'all' ? activeProgramId : (programs[0]?.id || 'prog-mec');
     setMemberProgramIds([defaultProg]);
     setMemberPrimaryProgramId(defaultProg);
+    setMemberProgramRoles({ [defaultProg]: 'miembro' });
     setShowMemberModal(true);
   };
 
@@ -175,6 +181,7 @@ export const Module_Admin: React.FC = () => {
       : [u.primaryProgramId || programs[0]?.id || 'prog-mec'];
     setMemberProgramIds(userProgs);
     setMemberPrimaryProgramId(u.primaryProgramId || userProgs[0] || 'prog-mec');
+    setMemberProgramRoles(u.programRoles || {});
     setShowMemberModal(true);
   };
 
@@ -189,12 +196,19 @@ export const Module_Admin: React.FC = () => {
       if (memberPrimaryProgramId === progId) {
         setMemberPrimaryProgramId(updated[0] || '');
       }
+      const newRoles = { ...memberProgramRoles };
+      delete newRoles[progId];
+      setMemberProgramRoles(newRoles);
     } else {
       const updated = [...memberProgramIds, progId];
       setMemberProgramIds(updated);
       if (!memberPrimaryProgramId) {
         setMemberPrimaryProgramId(progId);
       }
+      setMemberProgramRoles({
+        ...memberProgramRoles,
+        [progId]: 'miembro',
+      });
     }
   };
 
@@ -204,6 +218,11 @@ export const Module_Admin: React.FC = () => {
     if (!memberPrimaryProgramId && allIds.length > 0) {
       setMemberPrimaryProgramId(allIds[0]);
     }
+    const newRoles: Record<string, string> = { ...memberProgramRoles };
+    allIds.forEach((id) => {
+      if (!newRoles[id]) newRoles[id] = 'miembro';
+    });
+    setMemberProgramRoles(newRoles);
   };
 
   const handleSaveMember = (e: React.FormEvent) => {
@@ -215,24 +234,23 @@ export const Module_Admin: React.FC = () => {
       return;
     }
 
-    const selectedRole = customRoles.find((r) => r.id === memberRoleId);
-    const selectedEst = estamentos.find((e) => e.id === memberEstamentoId);
-
-    const baseRole: UserRole = selectedRole ? selectedRole.baseCapability : 'miembro';
-    const roleLabel = selectedRole ? selectedRole.name : 'Miembro del Comité';
-    const estNameStr = selectedEst ? selectedEst.name : 'Comité Curricular';
-
     const finalPrimaryProg = memberPrimaryProgramId && memberProgramIds.includes(memberPrimaryProgramId)
       ? memberPrimaryProgramId
       : memberProgramIds[0];
+
+    const primaryProgramRoleVal = memberProgramRoles[finalPrimaryProg] || 'miembro';
+    const roleSync = mapProgramRoleToGlobalUserRole(primaryProgramRoleVal);
+
+    const selectedEst = estamentos.find((e) => e.id === memberEstamentoId);
+    const estNameStr = selectedEst ? selectedEst.name : 'Comité Curricular';
 
     if (editingUserId) {
       updateUser(editingUserId, {
         name: memberName.trim(),
         email: memberEmail.trim(),
-        role: baseRole,
-        customRoleId: memberRoleId,
-        roleLabel,
+        role: roleSync.role,
+        customRoleId: roleSync.customRoleId,
+        roleLabel: roleSync.roleLabel,
         estamentoId: memberEstamentoId,
         estamentoName: estNameStr,
         faculty: memberFaculty.trim(),
@@ -243,14 +261,16 @@ export const Module_Admin: React.FC = () => {
         password: memberPassword.trim() || undefined,
         programIds: memberProgramIds,
         primaryProgramId: finalPrimaryProg,
+        programRoles: memberProgramRoles,
+        programas_asignados: memberProgramIds,
       });
     } else {
       createUser({
         name: memberName.trim(),
         email: memberEmail.trim(),
-        role: baseRole,
-        customRoleId: memberRoleId,
-        roleLabel,
+        role: roleSync.role,
+        customRoleId: roleSync.customRoleId,
+        roleLabel: roleSync.roleLabel,
         estamentoId: memberEstamentoId,
         estamentoName: estNameStr,
         faculty: memberFaculty.trim(),
@@ -261,6 +281,8 @@ export const Module_Admin: React.FC = () => {
         password: memberPassword.trim() || 'Umayor2026!',
         programIds: memberProgramIds,
         primaryProgramId: finalPrimaryProg,
+        programRoles: memberProgramRoles,
+        programas_asignados: memberProgramIds,
       });
     }
 
@@ -507,12 +529,16 @@ export const Module_Admin: React.FC = () => {
             onClick={() => setActiveTab('members')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
               activeTab === 'members'
-                ? 'bg-white text-slate-900 shadow-xs'
+                ? 'bg-[#006837] text-white shadow-xs font-bold'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
+            title="Gestión de integrantes del comité y asignación de permisos por programa académico"
           >
-            <Users className="h-3.5 w-3.5" />
-            Miembros ({users.length})
+            <Users className={`h-3.5 w-3.5 ${activeTab === 'members' ? 'text-[#E58A13]' : 'text-slate-500'}`} />
+            <span>Miembros & Permisos ({users.length})</span>
+            <span className="text-[9px] bg-amber-400 text-slate-950 font-black px-1.5 py-0.2 rounded-md uppercase">
+              Gobernanza
+            </span>
           </button>
 
           <button
@@ -587,34 +613,64 @@ export const Module_Admin: React.FC = () => {
                 Registrar Nuevo Miembro
               </button>
 
+              {/* Sub-view switcher: List vs Matrix */}
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200">
+                <button
+                  onClick={() => setMemberSubView('cards')}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                    memberSubView === 'cards'
+                      ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Users className="h-3.5 w-3.5 text-[#006837]" />
+                  <span>Listado Integrantes</span>
+                </button>
+                <button
+                  onClick={() => setMemberSubView('matrix')}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                    memberSubView === 'matrix'
+                      ? 'bg-[#006837] text-white shadow-2xs font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <ShieldCheck className="h-3.5 w-3.5 text-[#E58A13]" />
+                  <span>Matriz de Permisos por Programa</span>
+                </button>
+              </div>
+
               {/* Program filter */}
-              <select
-                value={programFilter}
-                onChange={(e) => setProgramFilter(e.target.value)}
-                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700"
-                title="Filtrar integrantes por programa curricular"
-              >
-                <option value="all">Todos los Programas de Facultad</option>
-                {programs.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.code} - {p.name}
-                  </option>
-                ))}
-              </select>
+              {memberSubView === 'cards' && (
+                <select
+                  value={programFilter}
+                  onChange={(e) => setProgramFilter(e.target.value)}
+                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700"
+                  title="Filtrar integrantes por programa curricular"
+                >
+                  <option value="all">Todos los Programas de Facultad</option>
+                  {programs.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.code} - {p.name}
+                    </option>
+                  ))}
+                </select>
+              )}
 
               {/* Estamento filter */}
-              <select
-                value={estamentoFilter}
-                onChange={(e) => setEstamentoFilter(e.target.value)}
-                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700"
-              >
-                <option value="all">Todos los Estamentos</option>
-                {estamentos.map((est) => (
-                  <option key={est.id} value={est.id}>
-                    {est.name} ({est.code})
-                  </option>
-                ))}
-              </select>
+              {memberSubView === 'cards' && (
+                <select
+                  value={estamentoFilter}
+                  onChange={(e) => setEstamentoFilter(e.target.value)}
+                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700"
+                >
+                  <option value="all">Todos los Estamentos</option>
+                  {estamentos.map((est) => (
+                    <option key={est.id} value={est.id}>
+                      {est.name} ({est.code})
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div className="relative min-w-[240px]">
@@ -629,137 +685,151 @@ export const Module_Admin: React.FC = () => {
             </div>
           </div>
 
-          {/* Members Table */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="border-b border-slate-200 bg-slate-100/70 font-semibold text-slate-700">
-                  <tr>
-                    <th className="py-3 px-4">Nombre y Correo Institucional</th>
-                    <th className="py-3 px-4">Programas Asociados (Multiprograma)</th>
-                    <th className="py-3 px-4">Rol del Comité</th>
-                    <th className="py-3 px-4">Estamento que Representa</th>
-                    <th className="py-3 px-4 text-center">Derecho a Voto</th>
-                    <th className="py-3 px-4">Período</th>
-                    <th className="py-3 px-4 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredUsers.length === 0 ? (
+          {/* Member View Mode: Matrix vs Cards */}
+          {memberSubView === 'matrix' ? (
+            <ProgramPermissionsMatrix
+              users={users}
+              programs={programs}
+              updateUser={updateUser}
+              currentUser={currentUser}
+            />
+          ) : (
+            /* Members Table View */
+            <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="border-b border-slate-200 bg-slate-100/70 font-semibold text-slate-700">
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-xs text-slate-400">
-                        No se encontraron integrantes que coincidan con los criterios de búsqueda o filtro de programa.
-                      </td>
+                      <th className="py-3 px-4">Nombre y Correo Institucional</th>
+                      <th className="py-3 px-4">Programas y Roles por Programa</th>
+                      <th className="py-3 px-4">Rol del Comité</th>
+                      <th className="py-3 px-4">Estamento que Representa</th>
+                      <th className="py-3 px-4 text-center">Derecho a Voto</th>
+                      <th className="py-3 px-4">Período</th>
+                      <th className="py-3 px-4 text-right">Acciones</th>
                     </tr>
-                  ) : (
-                    filteredUsers.map((u) => {
-                      const userProgs = u.programIds && u.programIds.length > 0 
-                        ? u.programIds 
-                        : (u.primaryProgramId ? [u.primaryProgramId] : ['prog-mec']);
-                      
-                      return (
-                        <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-2.5">
-                              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#006837] text-xs font-bold text-white font-mono shadow-2xs">
-                                {u.avatarInitials}
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredUsers.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-8 text-center text-xs text-slate-400">
+                          No se encontraron integrantes que coincidan con los criterios de búsqueda o filtro de programa.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredUsers.map((u) => {
+                        const userProgs = u.programIds && u.programIds.length > 0 
+                          ? u.programIds 
+                          : (u.primaryProgramId ? [u.primaryProgramId] : ['prog-mec']);
+                        
+                        return (
+                          <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-2.5">
+                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#006837] text-xs font-bold text-white font-mono shadow-2xs">
+                                  {u.avatarInitials}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-slate-900 truncate">{u.name}</p>
+                                  <p className="text-[10px] text-slate-500 font-mono truncate">{u.email}</p>
+                                </div>
                               </div>
-                              <div className="min-w-0">
-                                <p className="font-semibold text-slate-900 truncate">{u.name}</p>
-                                <p className="text-[10px] text-slate-500 font-mono truncate">{u.email}</p>
+                            </td>
+
+                            {/* Multiprogram Badges with Specific Program Roles */}
+                            <td className="py-3 px-4">
+                              <div className="flex flex-wrap items-center gap-1 max-w-[260px]">
+                                {userProgs.map((pid) => {
+                                  const progObj = programs.find((p) => p.id === pid);
+                                  const isPrimary = u.primaryProgramId === pid;
+                                  const progRole = u.programRoles?.[pid] || (u.role === 'presidente' ? 'presidente' : 'miembro');
+                                  return (
+                                    <span
+                                      key={pid}
+                                      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border ${getProgramBadgeClasses(progObj?.color)}`}
+                                      title={`${progObj?.name || pid} — Rol: ${progRole}${isPrimary ? ' · (Programa Principal)' : ''}`}
+                                    >
+                                      {isPrimary && <Star className="h-2.5 w-2.5 text-amber-500 fill-amber-500 shrink-0" />}
+                                      <span>{progObj?.code || pid}</span>
+                                      <span className="text-[9px] font-sans font-black uppercase px-1 rounded bg-black/10 text-slate-900">
+                                        {progRole}
+                                      </span>
+                                    </span>
+                                  );
+                                })}
                               </div>
-                            </div>
-                          </td>
+                            </td>
 
-                          {/* Multiprogram Badges */}
-                          <td className="py-3 px-4">
-                            <div className="flex flex-wrap items-center gap-1 max-w-[240px]">
-                              {userProgs.map((pid) => {
-                                const progObj = programs.find((p) => p.id === pid);
-                                const isPrimary = u.primaryProgramId === pid;
-                                return (
-                                  <span
-                                    key={pid}
-                                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border ${getProgramBadgeClasses(progObj?.color)}`}
-                                    title={`${progObj?.name || pid}${isPrimary ? ' · Programa Principal' : ''}`}
-                                  >
-                                    {isPrimary && <Star className="h-2.5 w-2.5 text-amber-500 fill-amber-500 shrink-0" />}
-                                    {progObj?.code || pid}
-                                  </span>
-                                );
-                              })}
-                            </div>
-                          </td>
-
-                          <td className="py-3 px-4">
-                            <span className="font-medium text-slate-800">{u.roleLabel}</span>
-                            <span className="block text-[10px] text-slate-400 uppercase font-mono">
-                              Base: {u.role}
-                            </span>
-                          </td>
-
-                          <td className="py-3 px-4">
-                            <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700 border border-slate-200">
-                              <Building2 className="h-3 w-3 text-slate-500" />
-                              {u.estamentoName || 'Sin estamento'}
-                            </span>
-                          </td>
-
-                          <td className="py-3 px-4 text-center">
-                            {u.hasVote !== false && u.role !== 'invitado_externo' ? (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                                <CheckCircle2 className="h-3 w-3 text-emerald-600" /> Voz y Voto
+                            <td className="py-3 px-4">
+                              <span className="font-medium text-slate-800">{u.roleLabel}</span>
+                              <span className="block text-[10px] text-slate-400 uppercase font-mono">
+                                Base: {u.role}
                               </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
-                                <Vote className="h-3 w-3 text-slate-400" /> Solo Voz
+                            </td>
+
+                            <td className="py-3 px-4">
+                              <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700 border border-slate-200">
+                                <Building2 className="h-3 w-3 text-slate-500" />
+                                {u.estamentoName || 'Sin estamento'}
                               </span>
-                            )}
-                          </td>
+                            </td>
 
-                          <td className="py-3 px-4 font-mono text-[11px] text-slate-600">
-                            {u.periodo || '2026 - 2028'}
-                          </td>
-
-                          <td className="py-3 px-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                onClick={() => switchUser(u.id)}
-                                className="text-[11px] font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded cursor-pointer"
-                                title="Asumir este perfil en sesión"
-                              >
-                                Simular
-                              </button>
-                              <button
-                                onClick={() => openEditMemberModal(u)}
-                                className="p-1 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-100 cursor-pointer"
-                                title="Editar miembro y programas"
-                              >
-                                <Edit3 className="h-3.5 w-3.5" />
-                              </button>
-                              {u.role !== 'super_admin' && (
-                                <button
-                                  onClick={() => {
-                                    if (confirm(`¿Eliminar al miembro ${u.name}?`)) {
-                                      deleteUser(u.id);
-                                    }
-                                  }}
-                                  className="p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-slate-100 cursor-pointer"
-                                  title="Dar de baja"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
+                            <td className="py-3 px-4 text-center">
+                              {u.hasVote !== false && u.role !== 'invitado_externo' ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                  <CheckCircle2 className="h-3 w-3 text-emerald-600" /> Voz y Voto
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                                  <Vote className="h-3 w-3 text-slate-400" /> Solo Voz
+                                </span>
                               )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                            </td>
+
+                            <td className="py-3 px-4 font-mono text-[11px] text-slate-600">
+                              {u.periodo || '2026 - 2028'}
+                            </td>
+
+                            <td className="py-3 px-4 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={() => switchUser(u.id)}
+                                  className="text-[11px] font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded cursor-pointer"
+                                  title="Asumir este perfil en sesión"
+                                >
+                                  Simular
+                                </button>
+                                <button
+                                  onClick={() => openEditMemberModal(u)}
+                                  className="p-1 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-100 cursor-pointer"
+                                  title="Editar miembro y permisos por programa"
+                                >
+                                  <Edit3 className="h-3.5 w-3.5" />
+                                </button>
+                                {u.role !== 'super_admin' && (
+                                  <button
+                                    onClick={() => {
+                                      if (confirm(`¿Eliminar al miembro ${u.name}?`)) {
+                                        deleteUser(u.id);
+                                      }
+                                    }}
+                                    className="p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-slate-100 cursor-pointer"
+                                    title="Dar de baja"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -1042,6 +1112,28 @@ export const Module_Admin: React.FC = () => {
                             )}
                           </div>
                           <p className="text-[10px] text-slate-500 truncate">{prog.name}</p>
+                          {isChecked && (
+                            <div className="mt-1.5 flex items-center justify-between gap-1 pt-1 border-t border-slate-100" onClick={(e) => e.stopPropagation()}>
+                              <span className="text-[9px] font-bold text-slate-500 uppercase">Rol en programa:</span>
+                              <select
+                                value={memberProgramRoles[prog.id] || 'miembro'}
+                                onChange={(e) => {
+                                  setMemberProgramRoles({
+                                    ...memberProgramRoles,
+                                    [prog.id]: e.target.value
+                                  });
+                                }}
+                                className="text-[10px] font-bold rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-slate-800 focus:ring-1 focus:ring-[#006837]"
+                              >
+                                <option value="presidente">Presidente</option>
+                                <option value="secretario">Secretario</option>
+                                <option value="vocal">Vocal</option>
+                                <option value="seguimiento">Seguimiento</option>
+                                <option value="autoevaluacion">Autoevaluación</option>
+                                <option value="miembro">Miembro</option>
+                              </select>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

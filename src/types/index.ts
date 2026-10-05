@@ -84,6 +84,7 @@ export interface User {
   primaryProgramId?: string; // Programa principal de adscripción
   programas_asignados?: string[]; // Lista de programas académicos asignados al perfil del usuario
   programa_activo?: string; // Programa académico activo actualmente seleccionado
+  programRoles?: Record<string, string>; // Roles específicos por programa académico (ej. { "prog-mec": "presidente", "prog-sis": "secretario", "prog-civ": "vocal" })
 }
 
 export type MeetingType = 'ordinaria' | 'extraordinaria';
